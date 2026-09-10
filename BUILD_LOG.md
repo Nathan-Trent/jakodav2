@@ -102,7 +102,10 @@ creation; weekly rotating manager PIN.
 - Not verified end-to-end against a real auth user yet.
 
 ## Stage 3 — Desktop app skeleton
-Status: IN PROGRESS — sales flow verified in browser; Tauri window pending
+Status: DONE (2026-09-11) — sales flow verified against real DB; native
+Tauri window compiles and runs (VS 2022 Build Tools + Windows SDK installed,
+12.5 min cold build). UI on shadcn/ui with placeholder palette pending
+Nathan's design elements.
 Real sales flow against one shop (add item → sell → hits database).
 
 **Built (2026-09-10):**
@@ -119,11 +122,12 @@ Real sales flow against one shop (add item → sell → hits database).
   batch → allocation row, gross profit ₦56,000, stock 3 → 1, device_id set.
 - Placeholder icons generated (`src-tauri/icons`).
 
-**Not done:**
-- Tauri native window not yet compiled: Nathan's VS 2019 Build Tools lack
-  the Windows SDK / C++ workload (`link.exe` fails). VS 2022 Build Tools
-  install in progress. Note: run cargo from PowerShell, not Git Bash
-  (Git's `link` shadows MSVC `link.exe`).
+- shadcn/ui adopted (Zogal conventions: `components.json`, `@/` alias,
+  `cn()`, `ui/` components, oklch tokens). Font: Inter for now.
+
+**Not done / notes:**
+- Dev tip: run cargo/tauri from PowerShell, not Git Bash (Git's `link`
+  shadows MSVC `link.exe`). `npm run desktop:tauri` needs port 1420 free.
 - Design is placeholder — Nathan will supply design elements before the
   UI is styled properly.
 - Device credential in localStorage (Stage 5 moves it to native store).
@@ -189,6 +193,12 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   SECURITY DEFINER SQL (no server). Found + fixed an RLS bypass in 0001's
   `item_stock` view. `tsc -b` / eslint / 8 tests green. Migration handed to
   Nathan; not applied. Next: apply 0002, smoke-test with a real signup.
+- **2026-09-11** — Stage 3 DONE. 0004 applied; real sale verified in DB
+  (2 × ₦90,000 from ₦62,000 batch, profit ₦56,000, device_id set).
+  shadcn/ui adopted. Disk-full blocked Build Tools install (3.4 GB free)
+  → Nathan cleared space → VS 2022 Build Tools + SDK installed → Rust
+  shell compiled and native window runs. Next: Nathan's design elements,
+  then Stage 4 (barcodes).
 - **2026-09-10** — Nathan applied 0002. Runtime error: `gen_random_bytes`
   not found — Supabase keeps pgcrypto in the `extensions` schema and the
   definer functions pinned `search_path = public`. Fixed in-repo 0002 and
