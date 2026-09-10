@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets — service-role key must never be committed
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+dist-types/
+build/
+out/
+*.tsbuildinfo
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/schemas/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+
+# Next.js (web dashboard, Stage 8)
+.next/
+.vercel/
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local Claude state
+.claude/settings.local.json
