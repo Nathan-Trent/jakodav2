@@ -1,12 +1,14 @@
-import { SessionProvider, useSession } from "./lib/session.js";
-import { LoginScreen } from "./screens/LoginScreen.js";
-import { SetupScreen } from "./screens/SetupScreen.js";
-import { PosScreen } from "./screens/PosScreen.js";
+import { Toaster } from "@/components/ui/sonner";
+import { SessionProvider, useSession } from "@/lib/session";
+import { LoginScreen } from "@/screens/LoginScreen";
+import { SetupScreen } from "@/screens/SetupScreen";
+import { PosScreen } from "@/screens/PosScreen";
 
 export function App() {
   return (
     <SessionProvider>
       <Router />
+      <Toaster position="top-center" richColors />
     </SessionProvider>
   );
 }

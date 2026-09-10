@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AuthRepository, type DeviceActivation, type Membership, type MyContext } from "@jakodav/auth-permissions";
 import { InventoryRepository } from "@jakodav/inventory-batches";
-import { getSupabase } from "./supabase.js";
-import { clearDevice, loadDevice, saveDevice } from "./device.js";
+import { getSupabase } from "@/lib/supabase";
+import { clearDevice, loadDevice, saveDevice } from "@/lib/device";
 
 /**
  * App-wide session: Supabase auth state → our own user/memberships via

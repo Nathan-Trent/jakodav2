@@ -1,65 +1,96 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* Token structure follows Zogal's conventions (shadcn-style HSL variables
-   mapped into Tailwind's @theme). Palette is JakoDav's own. */
+/* shadcn/ui token structure (same as Zogal). Palette is a PLACEHOLDER —
+   Nathan will supply brand colours; swap the values in :root / .dark only. */
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-status-green: hsl(var(--status-green));
-  --color-status-amber: hsl(var(--status-amber));
-  --color-status-red: hsl(var(--status-red));
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-status-green: var(--status-green);
+  --color-status-amber: var(--status-amber);
+  --color-status-red: var(--status-red);
   --font-sans: "Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 :root {
-  --background: 0 0% 98%;
-  --foreground: 200 20% 10%;
-  --card: 0 0% 100%;
-  --card-foreground: 200 20% 10%;
-  --primary: 174 78% 26%;          /* teal — matches the app icon */
-  --primary-foreground: 0 0% 100%;
-  --muted: 200 15% 94%;
-  --muted-foreground: 200 10% 40%;
-  --destructive: 0 72% 45%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 200 15% 88%;
-  --input: 200 15% 88%;
-  --ring: 174 78% 26%;
-  --status-green: 150 60% 36%;
-  --status-amber: 38 92% 45%;
-  --status-red: 0 72% 45%;
+  --radius: 0.625rem;
+  --background: oklch(0.985 0.002 200);
+  --foreground: oklch(0.2 0.02 220);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 220);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 220);
+  --primary: oklch(0.5 0.1 180);            /* placeholder teal */
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.955 0.005 200);
+  --secondary-foreground: oklch(0.25 0.02 220);
+  --muted: oklch(0.955 0.005 200);
+  --muted-foreground: oklch(0.5 0.02 220);
+  --accent: oklch(0.955 0.005 200);
+  --accent-foreground: oklch(0.25 0.02 220);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.9 0.005 200);
+  --input: oklch(0.9 0.005 200);
+  --ring: oklch(0.5 0.1 180);
+  --status-green: oklch(0.55 0.15 155);
+  --status-amber: oklch(0.7 0.16 70);
+  --status-red: oklch(0.577 0.245 27.325);
 }
 
-html, body, #root { height: 100%; }
-body {
-  @apply bg-background text-foreground font-sans antialiased;
-  /* POS terminal: never let the webview select/drag UI chrome */
-  user-select: none;
+.dark {
+  --background: oklch(0.16 0.01 220);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.01 220);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.01 220);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.72 0.12 180);
+  --primary-foreground: oklch(0.16 0.01 220);
+  --secondary: oklch(0.27 0.01 220);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.27 0.01 220);
+  --muted-foreground: oklch(0.7 0.01 220);
+  --accent: oklch(0.27 0.01 220);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.7 0.19 22);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.72 0.12 180);
+  --status-green: oklch(0.72 0.15 155);
+  --status-amber: oklch(0.8 0.16 70);
+  --status-red: oklch(0.7 0.19 22);
 }
-input, textarea, [contenteditable] { user-select: text; }
 
-@layer components {
-  .btn, .btn-primary, .btn-secondary, .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* POS terminal: never let the webview select/drag UI chrome */
+    user-select: none;
   }
-  .btn-primary { @apply bg-primary text-primary-foreground hover:opacity-90; }
-  .btn-secondary { @apply bg-muted text-foreground hover:bg-border; }
-  .btn-ghost { @apply hover:bg-muted; }
-  .input { @apply w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring; }
-  .label { @apply block text-xs font-medium text-muted-foreground mb-1; }
-  .card { @apply rounded-lg border border-border bg-card p-5; }
-  .alert-error { @apply rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive; }
+  input, textarea, [contenteditable] { user-select: text; }
 }
