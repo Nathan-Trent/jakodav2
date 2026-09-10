@@ -47,6 +47,8 @@ export const NewSaleSchema = z.object({
   /** SYNC: generated on the client so offline replays are idempotent. */
   clientRef: z.uuid(),
   soldBy: z.uuid(),
+  /** The activated terminal recording the sale (null while unactivated). */
+  deviceId: z.uuid().nullable().optional(),
   soldAt: z.iso.datetime().optional(),
   note: z.string().trim().max(1000).optional(),
   lines: z.array(SaleLineInputSchema).min(1),

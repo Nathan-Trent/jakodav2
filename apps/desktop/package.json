@@ -13,9 +13,11 @@
     "@jakodav/auth-permissions": "*",
     "@jakodav/inventory-batches": "*",
     "@jakodav/shared": "*",
+    "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2.9.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.9.0",

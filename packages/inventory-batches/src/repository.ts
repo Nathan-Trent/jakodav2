@@ -93,6 +93,7 @@ export class InventoryRepository {
       p_lines: v.lines,
       p_sold_at: v.soldAt ?? new Date().toISOString(),
       p_note: v.note ?? null,
+      p_device_id: v.deviceId ?? null,
     });
     if (error) throw error;
     return data as SaleRow;
@@ -111,6 +112,36 @@ export class InventoryRepository {
     return data as PurchaseCostCorrectionRow;
   }
 
+  async listItems(shopId: string): Promise<ItemRow[]> {
+    const { data, error } = await this.db
+      .from("items")
+      .select<"*", ItemRow>()
+      .eq("shop_id", shopId)
+      .eq("is_active", true)
+      .order("name");
+    if (error) throw error;
+    return data;
+  }
+
+  /** On-hand quantities for every item — visible to all members, no costs. */
+  async stockQuantities(shopId: string): Promise<Map<string, number>> {
+    const { data, error } = await this.db.rpc("shop_stock", { p_shop_id: shopId });
+    if (error) throw error;
+    return new Map((data as { item_id: string; on_hand: number }[]).map((r) => [r.item_id, r.on_hand]));
+  }
+
+  async recentSales(shopId: string, limit = 20): Promise<SaleRow[]> {
+    const { data, error } = await this.db
+      .from("sales")
+      .select<"*", SaleRow>()
+      .eq("shop_id", shopId)
+      .order("sold_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return data;
+  }
+
+  /** Stock with valuation — requires items.view_cost (RLS returns 0 otherwise). */
   async stockOnHand(shopId: string): Promise<ItemStockRow[]> {
     const { data, error } = await this.db
       .from("item_stock")

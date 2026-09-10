@@ -1,11 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 // Tauri expects a fixed port and no HMR overlay hijacking the webview.
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   clearScreen: false,
   server: {
     port: 1420,
@@ -16,6 +17,8 @@ export default defineConfig({
   },
   // Only VITE_-prefixed vars reach the bundle; SUPABASE_SERVICE_ROLE_KEY never will.
   envPrefix: ["VITE_", "TAURI_ENV_"],
+  // .env.local lives at the repo root, not in apps/desktop
+  envDir: "../..",
   build: {
     target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,

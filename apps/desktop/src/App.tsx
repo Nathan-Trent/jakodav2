@@ -1,25 +1,25 @@
-import { useMemo } from "react";
-import { getSupabase } from "./lib/supabase.js";
+import { SessionProvider, useSession } from "./lib/session.js";
+import { LoginScreen } from "./screens/LoginScreen.js";
+import { SetupScreen } from "./screens/SetupScreen.js";
+import { PosScreen } from "./screens/PosScreen.js";
 
-/**
- * Stage 1 shell: proves the toolchain (Vite → Tauri webview) and the anon
- * Supabase client boot. Real sales flow lands in Stage 3.
- */
 export function App() {
-  const status = useMemo(() => {
-    try {
-      getSupabase();
-      return "Supabase client ready (anon)";
-    } catch (e) {
-      return `Supabase not configured: ${(e as Error).message}`;
-    }
-  }, []);
-
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", padding: 24 }}>
-      <h1>JakoDav — desktop</h1>
-      <p>Stage 1 foundation scaffold.</p>
-      <p>{status}</p>
-    </main>
+    <SessionProvider>
+      <Router />
+    </SessionProvider>
   );
+}
+
+/** Screen selection is pure state — no router lib needed for a POS. */
+function Router() {
+  const { status, active, device } = useSession();
+
+  if (status === "loading") {
+    return <div className="min-h-full flex items-center justify-center text-sm text-muted-foreground">Loading…</div>;
+  }
+  if (status === "signed-out") return <LoginScreen />;
+  // Need a shop membership AND (for now) a bound terminal before selling.
+  if (!active || !device) return <SetupScreen />;
+  return <PosScreen />;
 }

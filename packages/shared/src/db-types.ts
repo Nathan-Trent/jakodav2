@@ -135,6 +135,7 @@ export interface SaleRow {
   shop_id: UUID;
   client_ref: UUID;
   sold_by: UUID | null;
+  device_id: UUID | null;
   sold_at: ISOTimestamp;
   status: "completed" | "voided";
   total: NumericString;
