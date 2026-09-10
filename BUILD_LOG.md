@@ -56,7 +56,11 @@ allocation. `record_sale()` not yet exercised — it requires a real
 **Next:** Stage 2.
 
 ## Stage 2 — Auth & roles end to end
-Status: IN PROGRESS — code written, migration 0002 NOT YET APPLIED
+Status: DONE (2026-09-10) — 0002 + 0003 applied; signup → users row →
+create_shop → Owner membership → get_my_context → device activation all
+verified with a real auth user via the Stage 3 UI. Invitations, custom
+roles, and manager PIN paths exist in SQL + TS but have no UI yet and are
+untested with a second user (Stage 8 dashboard / later).
 Supabase Auth wired to own permission tables; default roles + custom role
 creation; weekly rotating manager PIN.
 
@@ -98,9 +102,32 @@ creation; weekly rotating manager PIN.
 - Not verified end-to-end against a real auth user yet.
 
 ## Stage 3 — Desktop app skeleton
-Status: NOT STARTED
+Status: IN PROGRESS — sales flow verified in browser; Tauri window pending
 Real sales flow against one shop (add item → sell → hits database).
-`InventoryRepository` + `record_sale()` are ready to be called from UI.
+
+**Built (2026-09-10):**
+- `0004_sales_device.sql` (applied): `sales.device_id`, `record_sale(...,
+  p_device_id)`, `shop_stock()` (quantities for all members, no costs),
+  `device_status.is_online` coalesce.
+- `apps/desktop`: Tailwind 4 (Zogal token structure, placeholder palette),
+  `SessionProvider` (auth state → `get_my_context`, device binding in
+  localStorage), screens: Login/Signup, Setup (create shop / activate
+  terminal as owner / enter code), POS (items + stock, add item with
+  initial batch, cart with floor enforcement + stock check, record sale,
+  recent sales; cost + margin shown only with `items.view_cost`).
+- Verified with Nathan's real account: sale of 2 × ₦90,000 from a ₦62,000
+  batch → allocation row, gross profit ₦56,000, stock 3 → 1, device_id set.
+- Placeholder icons generated (`src-tauri/icons`).
+
+**Not done:**
+- Tauri native window not yet compiled: Nathan's VS 2019 Build Tools lack
+  the Windows SDK / C++ workload (`link.exe` fails). VS 2022 Build Tools
+  install in progress. Note: run cargo from PowerShell, not Git Bash
+  (Git's `link` shadows MSVC `link.exe`).
+- Design is placeholder — Nathan will supply design elements before the
+  UI is styled properly.
+- Device credential in localStorage (Stage 5 moves it to native store).
+- Vercel is wrongly pointed at `apps/desktop` — pause until Stage 8.
 
 ## Stage 4 — Barcode system
 Status: NOT STARTED

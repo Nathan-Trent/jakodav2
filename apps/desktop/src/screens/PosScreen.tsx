@@ -22,6 +22,8 @@ export function PosScreen() {
 
   const [items, setItems] = useState<ItemRow[]>([]);
   const [stock, setStock] = useState<Map<string, number>>(new Map());
+  /** Weighted cost of remaining stock per item — only fetched with items.view_cost. */
+  const [costs, setCosts] = useState<Map<string, Kobo>>(new Map());
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -29,21 +31,37 @@ export function PosScreen() {
   const [busy, setBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
+  const viewCost = perms.includes("items.view_cost");
+
   // sales RLS already limits a salesperson to their own sales
   const load = useCallback(async () => {
-    const [i, s, r] = await Promise.all([
+    const [i, s, r, v] = await Promise.all([
       inventory.listItems(shop.id),
       inventory.stockQuantities(shop.id),
       inventory.recentSales(shop.id),
+      viewCost ? inventory.stockOnHand(shop.id) : Promise.resolve([]),
     ]);
     setItems(i);
     setStock(s);
     setSales(r);
-  }, [inventory, shop.id]);
+    setCosts(
+      new Map(
+        v.filter((row) => row.on_hand > 0)
+          .map((row) => [row.item_id, Math.round(toKobo(row.stock_value) / row.on_hand) as Kobo]),
+      ),
+    );
+  }, [inventory, shop.id, viewCost]);
 
   useEffect(() => {
     load().catch((e) => setError(errorMessage(e)));
   }, [load]);
+
+  // Success banner clears itself.
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   function addToCart(item: ItemRow) {
     setCart((c) => {
@@ -124,8 +142,9 @@ export function PosScreen() {
 
           {showAdd && can("items.create") && (
             <AddItemForm
-              onDone={async () => {
+              onDone={async (name) => {
                 setShowAdd(false);
+                setNotice(`Added “${name}”`);
                 await load();
               }}
               onError={setError}
@@ -138,6 +157,9 @@ export function PosScreen() {
             <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
               {items.map((it) => {
                 const onHand = stock.get(it.id) ?? 0;
+                const cost = costs.get(it.id);
+                const suggested = toKobo(it.suggested_price);
+                const margin = cost !== undefined ? ((suggested - cost) as Kobo) : undefined;
                 return (
                   <button
                     key={it.id}
@@ -150,6 +172,15 @@ export function PosScreen() {
                     <div className="text-xs text-muted-foreground">
                       floor {formatNaira(toKobo(it.floor_price))} · {onHand} in stock
                     </div>
+                    {/* Cost + margin: Owner/Admin only (items.view_cost); salespeople never see this */}
+                    {viewCost && cost !== undefined && margin !== undefined && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        cost {formatNaira(cost)} · margin{" "}
+                        <span className={margin < 0 ? "text-status-red" : "text-status-green"}>
+                          {formatNaira(margin)} ({suggested > 0 ? Math.round((margin / suggested) * 100) : 0}%)
+                        </span>
+                      </div>
+                    )}
                   </button>
                 );
               })}
@@ -220,7 +251,7 @@ export function PosScreen() {
 }
 
 /** Add item + initial stock. Cost is only asked for if the user may see/record it. */
-function AddItemForm({ onDone, onError }: { onDone: () => Promise<void>; onError: (m: string) => void }) {
+function AddItemForm({ onDone, onError }: { onDone: (name: string) => Promise<void>; onError: (m: string) => void }) {
   const { active, inventory } = useSession();
   const shop = active!.shop;
   const canPurchase = active!.permissions.includes("purchases.create");
@@ -249,7 +280,7 @@ function AddItemForm({ onDone, onError }: { onDone: () => Promise<void>; onError
           lines: [{ itemId: item.id, quantity: Number(qty), unitCost: fromKobo(toKobo(cost || "0")) }],
         });
       }
-      await onDone();
+      await onDone(item.name);
     } catch (err) {
       onError(errorMessage(err));
     } finally {
