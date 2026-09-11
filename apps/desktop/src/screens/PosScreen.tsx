@@ -224,7 +224,7 @@ export function PosScreen() {
             <Separator />
             <div className="flex justify-between items-baseline">
               <span className="text-subheading">Total</span>
-              <span className="figure text-figure">{formatNaira(total)}</span>
+              <span className="figure figure-lg">{formatNaira(total)}</span>
             </div>
             <Button size="xl" className="w-full" disabled={busy || cart.length === 0 || cartProblems.length > 0 || !can("sales.create")} onClick={() => void checkout()}>
               {busy ? "Recording…" : "Record sale"}

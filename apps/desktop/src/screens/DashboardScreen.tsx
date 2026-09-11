@@ -68,7 +68,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
 
       <div className="px-8 pb-8 grid gap-6">
         {/* Headline figures */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <Stat label={mine ? "My takings today" : "Takings today"} value={formatNaira(money(data?.today.sales_total))}
                 sub={`${data?.today.sales_count ?? 0} ${plural(data?.today.sales_count ?? 0, "sale")} · ${data?.today.units_sold ?? 0} ${plural(data?.today.units_sold ?? 0, "unit")}`} primary />
           {viewCost ? (
@@ -83,7 +83,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
                 onClick={() => onNavigate("items")} />
         </div>
 
-        <div className="grid grid-cols-[1.4fr_1fr] gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-6">
           {/* Last 7 days */}
           <Card>
             <CardContent className="grid gap-4">
@@ -165,7 +165,7 @@ function Stat({ label, value, sub, primary, tone, onClick }: { label: string; va
       <CardContent className="px-5 grid gap-1">
         <Comp onClick={onClick} className="grid gap-1 text-left w-full">
           <div className={cn("text-micro", primary ? "text-white/60" : "text-muted-foreground")}>{label}</div>
-          <div className={cn("figure text-figure", tone === "warn" && !primary && "text-status-amber")}>{value}</div>
+          <div className={cn("figure figure-lg", tone === "warn" && !primary && "text-status-amber")}>{value}</div>
           {sub && <div className={cn("text-caption", primary ? "text-white/60" : "text-muted-foreground")}>{sub}</div>}
         </Comp>
       </CardContent>
