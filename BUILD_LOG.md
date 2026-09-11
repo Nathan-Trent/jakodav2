@@ -269,8 +269,35 @@ Edge Function NOT YET DEPLOYED.
   recently synced → full use with a visible warning; unverifiable + not
   syncing → read-only. Two tests pin this.
 
+**Offline READS added (2026-09-11, after Nathan's live test) — the missing half:**
+Stage 5 shipped an offline *outbox* but every read still went to the network,
+so offline the app showed no items, no history and no figures, and Purchases
+raised "No connection". Nathan's point: being offline means the terminal
+cannot learn about changes made elsewhere — it does NOT mean it forgets what
+it already downloaded. Fixed:
+- `sync/cache.ts`: IndexedDB read cache (DB v2, same store as the outbox),
+  `readThrough()` — fetch when possible, serve the last copy when not.
+- `lib/shopData.tsx`: the terminal's **working set** (items, barcodes, stock,
+  stock value, batches, recent sales, dashboard). Hydrates from IndexedDB
+  instantly, then refreshes opportunistically. Every screen renders from
+  this, never straight from the network.
+- Offline sales decrement the working set locally, so the next sale sees the
+  right stock; the server reconciles on replay.
+- Scanner resolves against the cached barcode list first, so scanning works
+  offline.
+- `StaleNotice`: a quiet "Offline — showing data as of 14:32" line with a
+  retry, replacing error toasts. Offline is a normal state in a Nigerian
+  shop, not a fault; a red banner every few seconds was the "constantly
+  complaining" failure.
+- Purchases deliberately still needs a connection (it creates immutable
+  batches and can shift selling prices — queuing it would let two terminals
+  invent conflicting batch histories). It now says so plainly and keeps the
+  list, instead of throwing a network error.
+
 **Not done:**
-- 0008 applied and keys generated; Edge Function needs a redeploy for CORS.
+- Offline end-to-end still unverified by a real outage test.
+- Expenses/purchases not queued offline (deliberate for purchases).
+- Device credential still in localStorage.
 - Offline path not yet exercised end to end against a real outage.
 - Device credential still in localStorage.
 - Purchases/expenses are not queued offline yet — only sales.

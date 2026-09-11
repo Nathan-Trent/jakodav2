@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { IconAlertTriangle, IconArrowRight, IconRefresh } from "@tabler/icons-react";
-import { fetchRecentSales, fetchShopDashboard, type RecentSale, type ShopDashboard } from "@zogal/inventory-batches";
+import type { ShopDashboard } from "@zogal/inventory-batches";
 import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
 import { PageHeader } from "@/components/AppShell";
+import { StaleNotice } from "@/components/StaleNotice";
+import { useShopData } from "@/lib/shopData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSession } from "@/lib/session";
-import { notifyError } from "@/lib/feedback";
-import { getSupabase } from "@/lib/supabase";
 import type { PageKey } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -23,28 +23,15 @@ const money = (v: string | number | null | undefined): Kobo => toKobo(v == null 
  */
 export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const { ctx, active } = useSession();
+  const { data: shopData, refreshing, refresh } = useShopData();
   const shop = active!.shop;
   const perms = active!.permissions;
   const viewCost = perms.includes("items.view_cost");
-  const [data, setData] = useState<ShopDashboard | null>(null);
-  const [recent, setRecent] = useState<RecentSale[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const db = getSupabase();
-      const [d, r] = await Promise.all([fetchShopDashboard(db, shop.id), fetchRecentSales(db, shop.id, 8)]);
-      setData(d);
-      setRecent(r);
-    } catch (e) {
-      notifyError(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [shop.id]);
-
-  useEffect(() => { void load(); }, [load]);
+  // Straight from the working set, so the dashboard reads the same offline.
+  const data = shopData.dashboard;
+  const recent = shopData.sales.slice(0, 8);
+  const loading = refreshing;
+  const load = refresh;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -67,6 +54,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
       />
 
       <div className="px-8 pb-8 grid gap-6">
+        <StaleNotice />
         {/* Headline figures */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <Stat label={mine ? "My takings today" : "Takings today"} value={formatNaira(money(data?.today.sales_total))}
@@ -136,12 +124,8 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
                 {recent.map((s) => (
                   <li key={s.id} className="flex items-center gap-4 py-2.5">
                     <div className="flex-1 min-w-0">
-                      <div className="text-small font-semibold truncate">
-                        {s.sale_lines.map((l) => `${l.quantity} × ${l.items?.name ?? "item"}`).join(", ")}
-                      </div>
                       <div className="text-caption text-muted-foreground">
                         {new Date(s.sold_at).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}
-                        {!mine && s.users ? ` · ${s.users.full_name}` : ""}
                       </div>
                     </div>
                     <div className="figure text-[15px] tabular">{formatNaira(toKobo(s.total))}</div>

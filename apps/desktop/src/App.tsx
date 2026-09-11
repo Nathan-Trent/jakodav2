@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/AppShell";
 import { SessionProvider, useSession } from "@/lib/session";
 import { SyncProvider, useSync } from "@/lib/sync";
+import { ShopDataProvider } from "@/lib/shopData";
 import { NAV, visibleNav, type PageKey } from "@/lib/nav";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
@@ -20,8 +21,10 @@ export function App() {
   return (
     <SessionProvider>
       <SyncProvider>
-        <Router />
-        <Toaster position="top-center" richColors />
+        <ShopDataProvider>
+          <Router />
+          <Toaster position="top-center" richColors />
+        </ShopDataProvider>
       </SyncProvider>
     </SessionProvider>
   );

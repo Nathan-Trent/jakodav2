@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IconBarcode, IconPencil, IconTrash, IconTruckDelivery } from "@tabler/icons-react";
 import type { BatchRow, ItemRow } from "@zogal/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@zogal/shared";
 import { announceStockChange, lookupBarcode, setItemPrices, stockChannel } from "@zogal/inventory-batches";
 import { PageHeader } from "@/components/AppShell";
+import { StaleNotice } from "@/components/StaleNotice";
+import { useShopData } from "@/lib/shopData";
 import { CostCorrectionDialog } from "@/components/CostCorrectionDialog";
 import { Alert } from "@/components/Alert";
 import { Badge } from "@/components/ui/badge";
@@ -36,13 +38,11 @@ interface RestockLine {
  */
 export function PurchasesScreen() {
   const { active, inventory, device } = useSession();
+  const { data, refresh } = useShopData();
   const shop = active!.shop;
   const perms = active!.permissions;
   const viewCost = perms.includes("items.view_cost");
 
-  const [items, setItems] = useState<ItemRow[]>([]);
-  const [latestBatch, setLatestBatch] = useState<Map<string, BatchRow>>(new Map());
-  const [recent, setRecent] = useState<BatchRow[]>([]);
   const [lines, setLines] = useState<RestockLine[]>([]);
   const [supplier, setSupplier] = useState("");
   const [q, setQ] = useState("");
@@ -50,33 +50,15 @@ export function PurchasesScreen() {
   const [priceReview, setPriceReview] = useState<RestockLine[] | null>(null);
   const [correcting, setCorrecting] = useState<BatchRow | null>(null);
   const canCorrect = perms.includes("purchases.correct_cost");
-  const channelRef = useRef<ReturnType<typeof stockChannel> | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const db = getSupabase();
-      const [i, b] = await Promise.all([
-        inventory.listItems(shop.id),
-        viewCost
-          ? db.from("batches").select<"*", BatchRow>().eq("shop_id", shop.id).order("purchased_at", { ascending: false }).limit(200).then((r) => { if (r.error) throw r.error; return r.data; })
-          : Promise.resolve([] as BatchRow[]),
-      ]);
-      setItems(i);
-      setRecent(b.slice(0, 25));
-      const latest = new Map<string, BatchRow>();
-      for (const row of b) if (!latest.has(row.item_id)) latest.set(row.item_id, row);
-      setLatestBatch(latest);
-    } catch (e) { notifyError(e); }
-  }, [inventory, shop.id, viewCost]);
-  useEffect(() => { void load(); }, [load]);
-
-  useEffect(() => {
-    const db = getSupabase();
-    const ch = stockChannel(db, shop.id);
-    ch.subscribe();
-    channelRef.current = ch;
-    return () => { void db.removeChannel(ch); channelRef.current = null; };
-  }, [shop.id]);
+  const items = data.items;
+  // Newest batch per item, from the working set — available offline too.
+  const latestBatch = useMemo(() => {
+    const m = new Map<string, BatchRow>();
+    for (const b of data.batches) if (!m.has(b.item_id)) m.set(b.item_id, b);
+    return m;
+  }, [data.batches]);
+  const recent = data.batches.slice(0, 25);
 
   function addLine(item: ItemRow) {
     setLines((ls) => {
@@ -87,13 +69,16 @@ export function PurchasesScreen() {
     });
   }
 
+  // Cache first, so scanning a delivery works with no connection.
   useBarcodeScanner(async (code) => {
-    try {
-      const hit = await lookupBarcode(getSupabase(), shop.id, code);
-      const item = hit && items.find((i) => i.id === hit.item_id);
-      if (!item) { notifyInfo("Barcode not recognised", `${code} isn't attached to any item here.`); return; }
-      addLine(item);
-    } catch (e) { notifyError(e); }
+    const trimmed = code.trim();
+    let itemId = data.barcodes.find((b) => b.code === trimmed)?.item_id ?? null;
+    if (!itemId && navigator.onLine) {
+      try { itemId = (await lookupBarcode(getSupabase(), shop.id, trimmed))?.item_id ?? null; } catch { /* cache is enough */ }
+    }
+    const item = itemId ? items.find((i) => i.id === itemId) : undefined;
+    if (!item) { notifyInfo("Barcode not recognised", `${trimmed} isn't attached to any item here.`); return; }
+    addLine(item);
   }, { enabled: !priceReview });
 
   const total = useMemo(() => addKobo(...lines.map((l) => mulKobo(l.unitCost, l.quantity))), [lines]);
@@ -102,6 +87,13 @@ export function PurchasesScreen() {
 
   async function save() {
     if (lines.length === 0 || problems.length) return;
+    // Receiving stock creates immutable batches and can shift selling prices,
+    // so unlike a sale it is NOT queued offline — doing so would let two
+    // terminals invent conflicting batch histories for the same delivery.
+    if (!navigator.onLine) {
+      notifyInfo("Can't receive stock while offline", "Deliveries need a connection so batch costs stay consistent across terminals. Your list is kept — try again when you're back online.");
+      return;
+    }
     setBusy(true);
     try {
       await inventory.recordPurchase({
@@ -110,11 +102,11 @@ export function PurchasesScreen() {
         lines: lines.map((l) => ({ itemId: l.item.id, quantity: l.quantity, unitCost: fromKobo(l.unitCost) })),
       });
       notifySuccess("Stock received", { description: `${lines.reduce((s, l) => s + l.quantity, 0)} units across ${lines.length} item(s) — each at its own batch cost.` });
-      if (channelRef.current) void announceStockChange(channelRef.current, device?.device_id ?? null);
+      void announceStockChange(stockChannel(getSupabase(), shop.id), device?.device_id ?? null);
       const changed = lines.filter((l) => l.lastCost !== null && l.lastCost !== l.unitCost);
       setLines([]);
       setSupplier("");
-      await load();
+      await refresh();
       if (changed.length && perms.includes("items.edit")) setPriceReview(changed);
     } catch (e) { notifyError(e); } finally { setBusy(false); }
   }
@@ -122,6 +114,7 @@ export function PurchasesScreen() {
   return (
     <>
       <PageHeader title="Purchases" description="Receive stock. Each line becomes a new batch at its own cost — old batches are never changed." />
+      <div className="px-8 pb-2"><StaleNotice /></div>
       <div className="px-8 pb-8 grid grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
         {/* Left: pick items + history */}
         <div className="grid gap-6">
@@ -232,8 +225,8 @@ export function PurchasesScreen() {
         </Card>
       </div>
 
-      <PriceReviewDialog lines={priceReview} onClose={() => setPriceReview(null)} onDone={load} />
-      <CostCorrectionDialog batch={correcting} itemName={correcting ? items.find((i) => i.id === correcting.item_id)?.name ?? "item" : ""} onClose={() => setCorrecting(null)} onDone={load} />
+      <PriceReviewDialog lines={priceReview} onClose={() => setPriceReview(null)} onDone={refresh} />
+      <CostCorrectionDialog batch={correcting} itemName={correcting ? items.find((i) => i.id === correcting.item_id)?.name ?? "item" : ""} onClose={() => setCorrecting(null)} onDone={refresh} />
     </>
   );
 }

@@ -18,8 +18,10 @@
  */
 
 const DB_NAME = "zogal-sync";
-const DB_VERSION = 1;
+/** Bumped to 2 when the read cache was added; see cache.ts for the schema. */
+const DB_VERSION = 2;
 const STORE = "outbox";
+const CACHE = "cache";
 
 export type OutboxKind = "sale";
 
@@ -50,6 +52,7 @@ function open(): Promise<IDBDatabase> {
         store.createIndex("pending", "syncedAt");
         store.createIndex("clientRef", "clientRef", { unique: true });
       }
+      if (!db.objectStoreNames.contains(CACHE)) db.createObjectStore(CACHE, { keyPath: "key" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

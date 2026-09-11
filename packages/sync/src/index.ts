@@ -3,6 +3,7 @@
  *
  * Owns everything about a terminal running without a network:
  *  - `queue`    local write-ahead outbox; instant local writes, durable
+ *  - `cache`    local copy of what was last downloaded, so reads work offline
  *  - `clock`    elapsed time the app can defend against a tampered clock
  *  - `token`    Ed25519 verification of the signed subscription token
  *  - `gating`   grace → read-only → locked, from both expiry and sync cadence
@@ -23,3 +24,4 @@ export * from "./token.js";
 export * from "./gating.js";
 export * from "./engine.js";
 export * from "./conflicts.js";
+export * from "./cache.js";

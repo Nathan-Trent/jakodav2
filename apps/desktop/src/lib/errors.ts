@@ -44,7 +44,10 @@ export function friendlyError(e: unknown): FriendlyError {
     return { title: "That already exists", action: "Use a different value." };
   }
   if (/Failed to fetch|NetworkError|ERR_INTERNET|fetch failed/i.test(raw)) {
-    return { title: "No connection", detail: "The change was not saved.", action: "Check the network and try again. Offline mode arrives in stage 5." };
+    // Sales queue offline and never reach here. Anything that does is an
+    // action that genuinely needs the server, so say what to do — don't
+    // imply the whole app is broken.
+    return { title: "Can't reach the server", detail: "This change needs a connection and wasn't saved.", action: "It will work again as soon as you're back online. Sales keep working offline." };
   }
   if (code === "PGRST202" || /Could not find the function/i.test(raw)) {
     return { title: "The database is behind the app", detail: raw, action: "Run the latest migration in Supabase." };
