@@ -66,6 +66,7 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
   const manualLooksEan = /^\d{13}$/.test(manual.trim());
   const manualEanBad = manualLooksEan && !isValidEan13(manual.trim());
   const primaryCode = codes[0];
+  const hasCode = !!primaryCode;
 
   return (
     <>
@@ -81,7 +82,9 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
             <div className="flex items-center justify-between">
               <h3 className="text-subheading flex items-center gap-2"><IconBarcode size={16} /> Barcodes</h3>
               {canEditItems && (
-                <Button size="sm" variant="outline" disabled={busy} onClick={() => run(async () => {
+                <Button size="sm" variant="outline" disabled={busy || hasCode}
+                  title={hasCode ? "This item already has a barcode — remove it first to generate a new one" : undefined}
+                  onClick={() => run(async () => {
                   const row = await generateBarcode(db, item.id);
                   notifySuccess("Barcode generated", { description: `${row.code} — print a label and stick it on the item.` });
                   await loadCodes();
@@ -109,7 +112,12 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
                 ))}
               </ul>
             )}
-            {canEditItems && (
+            {canEditItems && hasCode && (
+              <p className="text-caption text-muted-foreground">
+                An item carries exactly one barcode, so labels never disagree. To change it, remove the current code first — then you can generate or attach another.
+              </p>
+            )}
+            {canEditItems && !hasCode && (
               <form className="flex gap-2" onSubmit={(e: FormEvent) => { e.preventDefault(); void run(async () => {
                 await addManufacturerBarcode(db, shop.id, item.id, manual);
                 notifySuccess("Barcode attached");
@@ -120,7 +128,7 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
                 <Button type="submit" variant="secondary" disabled={busy || !manualOk || manualEanBad}>Attach</Button>
               </form>
             )}
-            {manualEanBad && <p className="text-caption text-destructive">That 13-digit code fails its check digit — probably a typo.</p>}
+            {!hasCode && manualEanBad && <p className="text-caption text-destructive">That 13-digit code fails its check digit — probably a typo.</p>}
 
             {primaryCode && (
               <div className="flex items-end gap-2 pt-1">

@@ -206,8 +206,16 @@ checking, label printing.
 
 **Not done:**
 - Real USB scanner not yet tested on hardware — Nathan to test when he has one.
-- `purchase_cost_corrections` UI (admin cost override) — next.
 - Multi-terminal broadcast verified in code only; needs two terminals.
+
+**Added (2026-09-11, after Nathan's review):**
+- **One barcode per item** — `0007_one_barcode_per_item.sql` (**to run**):
+  dedupes existing rows (keeps oldest), unique index on `barcodes(item_id)`,
+  `generate_barcode` raises `item_has_barcode`. UI: Generate/Attach are
+  disabled with the reason shown and the path forward (remove first).
+- **Cost correction UI** — `CostCorrectionDialog` from the Purchases batch
+  table (`purchases.correct_cost`): required reason, warns how many units
+  already sold keep their recorded cost; calls `correct_batch_cost()`.
 
 ## Stage 5 — Offline-first & sync
 Status: NOT STARTED

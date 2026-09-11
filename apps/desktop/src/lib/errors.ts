@@ -35,6 +35,9 @@ export function friendlyError(e: unknown): FriendlyError {
   if (/suggested price must be at least the floor/i.test(raw)) return { title: "Suggested price is below the floor", action: "Set the suggested price at or above the floor price." };
   if (/Email not confirmed/i.test(raw)) return { title: "Email not confirmed yet", action: "Open the confirmation link we emailed you, then sign in." };
   if (/Invalid login credentials/i.test(raw)) return { title: "Email or password is wrong", action: "Check both and try again." };
+  if (/item_has_barcode|barcodes_one_per_item/i.test(raw)) {
+    return { title: "This item already has a barcode", detail: "An item carries exactly one code, so labels never disagree.", action: "Remove the existing barcode first, then generate or attach a new one." };
+  }
   if (code === "23505" || /duplicate key|unique constraint/i.test(raw)) {
     if (/barcodes/.test(raw)) return { title: "That barcode is already used in this shop", action: "Check which item has it, or generate a new one." };
     if (/roles/.test(raw)) return { title: "A role with that key already exists", action: "Pick a different key." };

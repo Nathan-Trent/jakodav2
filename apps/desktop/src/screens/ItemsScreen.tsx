@@ -92,7 +92,7 @@ export function ItemsScreen() {
                     <TableCell className="text-muted-foreground">
                       {(codes.get(it.id)?.length ?? 0) === 0
                         ? <Badge variant="warning"><IconBarcode size={12} /> None</Badge>
-                        : <span className="font-mono text-caption">{codes.get(it.id)![0]!.code}{codes.get(it.id)!.length > 1 ? ` +${codes.get(it.id)!.length - 1}` : ""}</span>}
+                        : <span className="font-mono text-caption">{codes.get(it.id)![0]!.code}</span>}
                     </TableCell>
                     <TableCell className="text-right tabular text-muted-foreground">{formatNaira(toKobo(it.floor_price))}</TableCell>
                     <TableCell className="text-right tabular font-semibold">{formatNaira(toKobo(it.suggested_price))}</TableCell>

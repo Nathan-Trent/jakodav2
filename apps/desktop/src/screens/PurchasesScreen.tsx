@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IconBarcode, IconTrash, IconTruckDelivery } from "@tabler/icons-react";
+import { IconBarcode, IconPencil, IconTrash, IconTruckDelivery } from "@tabler/icons-react";
 import type { BatchRow, ItemRow } from "@jakoda/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@jakoda/shared";
 import { announceStockChange, lookupBarcode, setItemPrices, stockChannel } from "@jakoda/inventory-batches";
 import { PageHeader } from "@/components/AppShell";
+import { CostCorrectionDialog } from "@/components/CostCorrectionDialog";
 import { Alert } from "@/components/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,8 @@ export function PurchasesScreen() {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [priceReview, setPriceReview] = useState<RestockLine[] | null>(null);
+  const [correcting, setCorrecting] = useState<BatchRow | null>(null);
+  const canCorrect = perms.includes("purchases.correct_cost");
   const channelRef = useRef<ReturnType<typeof stockChannel> | null>(null);
 
   const load = useCallback(async () => {
@@ -157,7 +160,8 @@ export function PurchasesScreen() {
                     <TableHead>Item</TableHead>
                     <TableHead className="text-right">Qty</TableHead>
                     <TableHead className="text-right">Left</TableHead>
-                    <TableHead className="text-right pr-5">Unit cost</TableHead>
+                    <TableHead className="text-right">Unit cost</TableHead>
+                    <TableHead className="pr-5"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -167,7 +171,14 @@ export function PurchasesScreen() {
                       <TableCell className="font-semibold">{items.find((i) => i.id === b.item_id)?.name ?? "—"}</TableCell>
                       <TableCell className="text-right tabular">{b.quantity_received}</TableCell>
                       <TableCell className="text-right tabular">{b.quantity_remaining === 0 ? <Badge variant="secondary">Sold out</Badge> : b.quantity_remaining}</TableCell>
-                      <TableCell className="text-right tabular pr-5">{formatNaira(toKobo(b.unit_cost))}</TableCell>
+                      <TableCell className="text-right tabular">{formatNaira(toKobo(b.unit_cost))}</TableCell>
+                      <TableCell className="pr-5 text-right">
+                        {canCorrect && (
+                          <Button variant="ghost" size="sm" onClick={() => setCorrecting(b)} title="Correct a mistyped cost (logged)">
+                            <IconPencil size={14} /> Correct
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -222,6 +233,7 @@ export function PurchasesScreen() {
       </div>
 
       <PriceReviewDialog lines={priceReview} onClose={() => setPriceReview(null)} onDone={load} />
+      <CostCorrectionDialog batch={correcting} itemName={correcting ? items.find((i) => i.id === correcting.item_id)?.name ?? "item" : ""} onClose={() => setCorrecting(null)} onDone={load} />
     </>
   );
 }
