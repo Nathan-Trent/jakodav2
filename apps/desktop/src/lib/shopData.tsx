@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { BatchRow } from "@zogal/shared";
+import type { BatchRow, PurchaseRow } from "@zogal/shared";
+import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { toKobo, type Kobo } from "@zogal/shared";
 import { fetchShopDashboard, listBarcodes, stockChannel } from "@zogal/inventory-batches";
 import { cacheKey, getCache, pending, putCache, type OutboxEntry } from "@zogal/sync";
@@ -47,7 +48,7 @@ interface ShopDataContext {
 const Ctx = createContext<ShopDataContext | null>(null);
 
 export function ShopDataProvider({ children }: { children: ReactNode }) {
-  const { active, inventory } = useSession();
+  const { active, inventory, auth } = useSession();
   const { status: syncStatus } = useSync();
   const shopId = active?.shop.id ?? null;
   const viewCost = active?.permissions.includes("items.view_cost") ?? false;
@@ -88,7 +89,7 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
     setRefreshing(true);
     try {
       const db = getSupabase();
-      const [items, barcodes, stockMap, sales, dashboard, stockRows, batches] = await Promise.all([
+      const [items, barcodes, stockMap, sales, dashboard, stockRows, batches, purchases, devices] = await Promise.all([
         inventory.listItems(shopId),
         listBarcodes(db, shopId),
         inventory.stockQuantities(shopId),
@@ -100,12 +101,16 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
               .order("purchased_at", { ascending: false }).limit(200)
               .then((r) => { if (r.error) throw r.error; return r.data; })
           : Promise.resolve([] as BatchRow[]),
+        db.from("purchases").select<"*", PurchaseRow>().eq("shop_id", shopId)
+          .order("purchased_at", { ascending: false }).limit(200)
+          .then((r) => { if (r.error) throw r.error; return r.data; }),
+        auth.listDevices(shopId).catch(() => [] as DeviceStatusRow[]),
       ]);
       const next: ShopSnapshot = {
         items, barcodes,
         stock: Object.fromEntries(stockMap),
         stockValue: Object.fromEntries(stockRows.map((r) => [r.item_id, toKobo(r.stock_value)])),
-        batches, sales, dashboard,
+        batches, purchases, sales, dashboard, devices,
       };
       setSnapshot(next);
       await putCache(key, next);
@@ -117,7 +122,7 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
       setRefreshing(false);
       await reloadOverlay();
     }
-  }, [shopId, key, inventory, viewCost, reloadOverlay]);
+  }, [shopId, key, inventory, auth, viewCost, reloadOverlay]);
 
   useEffect(() => {
     setSnapshot(EMPTY);

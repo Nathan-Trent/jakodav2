@@ -1,9 +1,10 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { IconAlertTriangle, IconArrowRight, IconCloudUpload, IconRefresh } from "@tabler/icons-react";
 import type { ShopDashboard } from "@zogal/inventory-batches";
 import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
 import { PageHeader } from "@/components/AppShell";
 import { StaleNotice } from "@/components/StaleNotice";
+import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { useShopData } from "@/lib/shopData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,9 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
   const viewCost = perms.includes("items.view_cost");
   // Straight from the working set, so the dashboard reads the same offline.
   const data = shopData.dashboard;
-  const recent = shopData.sales.slice(0, 8);
+  const [terminal, setTerminal] = useState<string | null>(null);
+  const terminalName = useTerminalName();
+  const recent = shopData.sales.filter((s) => !terminal || s.device_id === terminal).slice(0, 8);
   const loading = refreshing;
   const load = refresh;
 
@@ -113,9 +116,12 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
         {/* Recent activity */}
         <Card>
           <CardContent className="grid gap-3">
-            <div className="flex items-baseline justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="text-title">Recent sales</div>
-              <button className="text-caption text-muted-foreground hover:text-foreground" onClick={() => onNavigate("reports")}>All sales</button>
+              <div className="flex items-center gap-3">
+                {!mine && <TerminalFilter value={terminal} onChange={setTerminal} />}
+                <button className="text-caption text-muted-foreground hover:text-foreground" onClick={() => onNavigate("reports")}>All sales</button>
+              </div>
             </div>
             {recent.length === 0 ? (
               <p className="text-small text-muted-foreground">No sales yet{perms.includes("sales.create") ? " — record the first one from Sell." : "."}</p>
@@ -126,6 +132,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
                     <div className="flex-1 min-w-0 flex items-center gap-2">
                       <div className="text-caption text-muted-foreground">
                         {new Date(s.sold_at).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}
+                        {!mine && !terminal && terminalName(s.device_id) ? ` · ${terminalName(s.device_id)}` : ""}
                       </div>
                       {s.pending && (
                         <Badge variant="warning"><IconCloudUpload size={12} /> Not yet uploaded</Badge>

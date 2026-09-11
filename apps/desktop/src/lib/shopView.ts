@@ -1,4 +1,5 @@
-import type { BarcodeRow, BatchRow, ItemRow, SaleRow } from "@zogal/shared";
+import type { BarcodeRow, BatchRow, ItemRow, PurchaseRow, SaleRow } from "@zogal/shared";
+import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { toKobo } from "@zogal/shared";
 import { allocateFifo, applyAllocation, cogs, type OpenBatch, type ShopDashboard } from "@zogal/inventory-batches";
 import type { OutboxEntry } from "@zogal/sync";
@@ -18,8 +19,12 @@ export interface ShopSnapshot {
   /** itemId → value of remaining stock, kobo. Only with items.view_cost. */
   stockValue: Record<string, number>;
   batches: BatchRow[];
+  /** Recent purchases — lets batches be filtered by the terminal that received them. */
+  purchases: PurchaseRow[];
   sales: SaleRow[];
   dashboard: ShopDashboard | null;
+  /** The shop's terminals, for names and the terminal filter. */
+  devices: DeviceStatusRow[];
 }
 
 /** A sale as the screens see it: from the server, or still on this terminal. */
@@ -36,6 +41,8 @@ export interface ShopView {
   /** Snapshot stock minus unsent sales. */
   stock: Record<string, number>;
   batches: BatchRow[];
+  purchases: PurchaseRow[];
+  devices: DeviceStatusRow[];
   /** Pending first (newest), then the server's, newest first. */
   sales: ViewSale[];
   /** Server figures plus unsent sales, computed locally. */
@@ -49,7 +56,7 @@ export interface OfflineSalePayload {
   note: string | null;
 }
 
-export const EMPTY_SNAPSHOT: ShopSnapshot = { items: [], barcodes: [], stock: {}, stockValue: {}, batches: [], sales: [], dashboard: null };
+export const EMPTY_SNAPSHOT: ShopSnapshot = { items: [], barcodes: [], stock: {}, stockValue: {}, batches: [], purchases: [], sales: [], dashboard: null, devices: [] };
 
 /**
  * Apply unsent sales to the server's view. Pure; the calculation the till
@@ -59,6 +66,7 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
   if (overlay.length === 0) {
     return {
       items: snap.items, barcodes: snap.barcodes, stock: snap.stock, batches: snap.batches,
+      purchases: snap.purchases, devices: snap.devices,
       sales: snap.sales.map((s) => ({ ...s, pending: false })),
       dashboard: snap.dashboard, pendingSales: 0,
     };
@@ -136,7 +144,11 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
     }
   }
 
-  return { items: snap.items, barcodes: snap.barcodes, stock, batches: snap.batches, sales, dashboard, pendingSales: overlay.length };
+  return {
+    items: snap.items, barcodes: snap.barcodes, stock, batches: snap.batches,
+    purchases: snap.purchases, devices: snap.devices,
+    sales, dashboard, pendingSales: overlay.length,
+  };
 }
 
 /** "as of 12:04" / "as of Tue 14:30" — for the staleness notice. */

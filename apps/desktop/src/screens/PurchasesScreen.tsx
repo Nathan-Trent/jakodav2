@@ -5,6 +5,7 @@ import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@zog
 import { announceStockChange, lookupBarcode, setItemPrices, stockChannel } from "@zogal/inventory-batches";
 import { PageHeader } from "@/components/AppShell";
 import { StaleNotice } from "@/components/StaleNotice";
+import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { useShopData } from "@/lib/shopData";
 import { CostCorrectionDialog } from "@/components/CostCorrectionDialog";
 import { Alert } from "@/components/Alert";
@@ -58,7 +59,12 @@ export function PurchasesScreen() {
     for (const b of data.batches) if (!m.has(b.item_id)) m.set(b.item_id, b);
     return m;
   }, [data.batches]);
-  const recent = data.batches.slice(0, 25);
+  const [terminal, setTerminal] = useState<string | null>(null);
+  const terminalName = useTerminalName();
+  const purchaseDevice = useMemo(() => new Map(data.purchases.map((p) => [p.id, p.device_id])), [data.purchases]);
+  const recent = data.batches
+    .filter((b) => !terminal || (b.purchase_id && purchaseDevice.get(b.purchase_id) === terminal))
+    .slice(0, 25);
 
   function addLine(item: ItemRow) {
     setLines((ls) => {
@@ -146,12 +152,16 @@ export function PurchasesScreen() {
 
           {viewCost && recent.length > 0 && (
             <Card className="py-0">
-              <div className="px-5 pt-4 pb-2 text-title">Recent batches</div>
+              <div className="px-5 pt-4 pb-2 flex items-center justify-between gap-3">
+                <div className="text-title">Recent batches</div>
+                <TerminalFilter value={terminal} onChange={setTerminal} />
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-5">Received</TableHead>
                     <TableHead>Item</TableHead>
+                    {!terminal && <TableHead>Terminal</TableHead>}
                     <TableHead className="text-right">Qty</TableHead>
                     <TableHead className="text-right">Left</TableHead>
                     <TableHead className="text-right">Unit cost</TableHead>
@@ -163,6 +173,7 @@ export function PurchasesScreen() {
                     <TableRow key={b.id}>
                       <TableCell className="pl-5 text-muted-foreground">{new Date(b.purchased_at).toLocaleDateString()}</TableCell>
                       <TableCell className="font-semibold">{items.find((i) => i.id === b.item_id)?.name ?? "—"}</TableCell>
+                      {!terminal && <TableCell className="text-muted-foreground">{(b.purchase_id && terminalName(purchaseDevice.get(b.purchase_id) ?? null)) || "—"}</TableCell>}
                       <TableCell className="text-right tabular">{b.quantity_received}</TableCell>
                       <TableCell className="text-right tabular">{b.quantity_remaining === 0 ? <Badge variant="secondary">Sold out</Badge> : b.quantity_remaining}</TableCell>
                       <TableCell className="text-right tabular">{formatNaira(toKobo(b.unit_cost))}</TableCell>
