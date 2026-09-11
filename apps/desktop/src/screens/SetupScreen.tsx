@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { AuthFrame } from "@/components/AuthFrame";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -64,11 +65,11 @@ export function SetupScreen() {
   const boundToOtherShop = device && !memberships.some((m) => m.shop.id === device.shop_id);
 
   return (
-    <div className="min-h-full flex items-center justify-center p-6">
+    <AuthFrame>
       <div className="w-full max-w-md grid gap-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Set up this terminal</h1>
+            <h1 className="text-heading">Set up this terminal</h1>
             <p className="text-sm text-muted-foreground">Signed in as {ctx?.user?.full_name}</p>
           </div>
           <Button variant="ghost" onClick={() => void signOut()}>Sign out</Button>
@@ -147,6 +148,6 @@ export function SetupScreen() {
           </>
         )}
       </div>
-    </div>
+    </AuthFrame>
   );
 }

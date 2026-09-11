@@ -1,4 +1,4 @@
-import type { DeviceActivation } from "@jakodav/auth-permissions";
+import type { DeviceActivation } from "@jakoda/auth-permissions";
 
 /**
  * Persisted device binding (TRD §1 activation flow). The credential is
@@ -9,7 +9,7 @@ import type { DeviceActivation } from "@jakodav/auth-permissions";
  * Stage 5 TODO: move to tauri-plugin-store / OS keychain so it isn't readable
  * from devtools, and so the SYNC layer can read it from the native side.
  */
-const KEY = "jakodav.device";
+const KEY = "jakoda.device";
 
 export function loadDevice(): DeviceActivation | null {
   try {

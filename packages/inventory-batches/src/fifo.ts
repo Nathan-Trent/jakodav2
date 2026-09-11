@@ -1,4 +1,4 @@
-import type { Kobo } from "@jakodav/shared";
+import type { Kobo } from "@jakoda/shared";
 
 /**
  * Pure FIFO allocator. Mirrors consume_batches_fifo() in

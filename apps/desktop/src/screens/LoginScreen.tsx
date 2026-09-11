@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { AuthFrame } from "@/components/AuthFrame";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,10 +35,10 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="min-h-full flex items-center justify-center p-6">
-      <Card className="w-full max-w-sm">
+    <AuthFrame>
+      <Card className="w-full max-w-sm elev-3">
         <CardHeader>
-          <CardTitle className="text-xl">JakoDav</CardTitle>
+          <CardTitle className="text-heading">Welcome back</CardTitle>
           <CardDescription>{mode === "signin" ? "Sign in to your shop" : "Create your account"}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -65,6 +66,6 @@ export function LoginScreen() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </AuthFrame>
   );
 }

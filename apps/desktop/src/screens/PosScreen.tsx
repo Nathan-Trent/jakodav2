@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { toast } from "sonner";
-import type { ItemRow, SaleRow } from "@jakodav/shared";
-import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@jakodav/shared";
-import { Badge } from "@/components/ui/badge";
+import type { ItemRow, SaleRow } from "@jakoda/shared";
+import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@jakoda/shared";
+import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AddItemDialog } from "@/components/AddItemDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -26,7 +26,7 @@ interface CartLine {
  * Barcode scanning (Stage 4) and offline queueing (Stage 5) plug in here.
  */
 export function PosScreen() {
-  const { ctx, active, device, inventory, signOut } = useSession();
+  const { ctx, active, device, inventory } = useSession();
   const shop = active!.shop;
   const perms = active!.permissions;
   const can = (p: (typeof perms)[number]) => perms.includes(p);
@@ -116,28 +116,12 @@ export function PosScreen() {
 
   return (
     <div className="h-full grid grid-rows-[auto_1fr]">
-      <header className="flex items-center justify-between border-b px-5 py-3">
-        <div>
-          <h1 className="font-semibold">{shop.name}</h1>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{ctx?.user?.full_name}</span>
-            <Badge variant="outline">{active!.role.name}</Badge>
-            {device ? <Badge variant="success">Terminal activated</Badge> : <Badge variant="warning">Not activated</Badge>}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {can("items.create") && (
-            <Button variant="outline" onClick={() => setShowAdd(true)}>
-              <Plus /> Add item
-            </Button>
-          )}
-          <Button variant="ghost" onClick={() => void signOut()}>Sign out</Button>
-        </div>
-      </header>
+      <PageHeader title="Sell" description="Tap items to build the sale. Price can go above suggested, never below floor."
+        actions={can("items.create") && <Button variant="outline" onClick={() => setShowAdd(true)}><IconPlus size={16} /> Add item</Button>} />
 
-      <div className="grid grid-cols-[1fr_380px] min-h-0">
+      <div className="grid grid-cols-[minmax(0,1fr)_380px] min-h-0">
         {/* Items */}
-        <section className="overflow-y-auto p-5 grid gap-6 content-start">
+        <section className="overflow-y-auto px-8 pb-8 grid gap-6 content-start">
           {items.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No items yet.{can("items.create") ? " Add your first item to start selling." : ""}
@@ -158,11 +142,11 @@ export function PosScreen() {
                     tabIndex={disabled ? -1 : 0}
                     onClick={() => !disabled && addToCart(it)}
                     onKeyDown={(e) => e.key === "Enter" && !disabled && addToCart(it)}
-                    className={cn("py-4 gap-1 cursor-pointer transition-colors hover:border-primary", disabled && "opacity-50 cursor-not-allowed hover:border-border")}
+                    className={cn("py-4 gap-1 cursor-pointer pressable hover:border-brand-action", disabled && "opacity-50 cursor-not-allowed hover:border-border")}
                   >
                     <CardContent className="px-4 grid gap-0.5">
                       <div className="font-medium truncate">{it.name}</div>
-                      <div className="text-sm">{formatNaira(suggested)}</div>
+                      <div className="figure text-[17px] tabular">{formatNaira(suggested)}</div>
                       <div className="text-xs text-muted-foreground">
                         floor {formatNaira(toKobo(it.floor_price))} · {onHand} in stock
                       </div>
@@ -202,7 +186,7 @@ export function PosScreen() {
         </section>
 
         {/* Cart */}
-        <aside className="border-l p-5 flex flex-col gap-3 overflow-y-auto">
+        <aside className="border-l bg-card p-5 flex flex-col gap-3 overflow-y-auto">
           <h2 className="font-medium">Sale</h2>
           {cart.length === 0 && <p className="text-sm text-muted-foreground">Tap an item to add it.</p>}
           {cart.map((l) => {
@@ -214,7 +198,7 @@ export function PosScreen() {
                   <div className="flex justify-between items-center gap-2">
                     <span className="font-medium truncate">{l.item.name}</span>
                     <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-destructive" onClick={() => setCart((c) => c.filter((x) => x !== l))} aria-label="Remove">
-                      <Trash2 />
+                      <IconTrash size={16} />
                     </Button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -238,9 +222,9 @@ export function PosScreen() {
           <div className="mt-auto grid gap-3">
             {cartProblems.length > 0 && <p className="text-sm text-destructive">{cartProblems[0]}</p>}
             <Separator />
-            <div className="flex justify-between text-lg font-semibold">
-              <span>Total</span>
-              <span>{formatNaira(total)}</span>
+            <div className="flex justify-between items-baseline">
+              <span className="text-subheading">Total</span>
+              <span className="figure text-figure">{formatNaira(total)}</span>
             </div>
             <Button size="xl" className="w-full" disabled={busy || cart.length === 0 || cartProblems.length > 0 || !can("sales.create")} onClick={() => void checkout()}>
               {busy ? "Recording…" : "Record sale"}
@@ -259,85 +243,5 @@ export function PosScreen() {
         }}
       />
     </div>
-  );
-}
-
-/** Add item + initial stock. Cost is only asked for if the user may record purchases. */
-function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (name: string) => Promise<void> }) {
-  const { active, inventory } = useSession();
-  const shop = active!.shop;
-  const canPurchase = active!.permissions.includes("purchases.create");
-  const [name, setName] = useState("");
-  const [floor, setFloor] = useState("");
-  const [suggested, setSuggested] = useState("");
-  const [qty, setQty] = useState("");
-  const [cost, setCost] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      const item = await inventory.createItem({
-        shopId: shop.id,
-        name,
-        floorPrice: fromKobo(toKobo(floor)),
-        suggestedPrice: fromKobo(toKobo(suggested)),
-      });
-      if (canPurchase && Number(qty) > 0) {
-        // Initial stock = first immutable batch (PRD §5.1)
-        await inventory.recordPurchase({
-          shopId: shop.id,
-          note: "Initial stock",
-          lines: [{ itemId: item.id, quantity: Number(qty), unitCost: fromKobo(toKobo(cost || "0")) }],
-        });
-      }
-      setName(""); setFloor(""); setSuggested(""); setQty(""); setCost("");
-      await onDone(item.name);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New item</DialogTitle>
-          <DialogDescription>Selling prices are editable later; the initial cost becomes a frozen batch.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={submit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="item-name">Name</Label>
-            <Input id="item-name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={200} autoFocus />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="item-floor">Floor price (₦)</Label>
-              <Input id="item-floor" type="number" min={0} step="0.01" value={floor} onChange={(e) => setFloor(e.target.value)} required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="item-suggested">Suggested price (₦)</Label>
-              <Input id="item-suggested" type="number" min={0} step="0.01" value={suggested} onChange={(e) => setSuggested(e.target.value)} required />
-            </div>
-          </div>
-          {canPurchase && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="item-qty">Initial quantity</Label>
-                <Input id="item-qty" type="number" min={0} step={1} value={qty} onChange={(e) => setQty(e.target.value)} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="item-cost">Cost per unit (₦)</Label>
-                <Input id="item-cost" type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
-              </div>
-            </div>
-          )}
-          <Button disabled={busy} className="justify-self-end">{busy ? "Saving…" : "Save item"}</Button>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }

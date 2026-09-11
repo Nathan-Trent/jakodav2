@@ -1,4 +1,4 @@
-import type { ISOTimestamp, RoleRow, ShopRow, UserRow, UUID } from "@jakodav/shared";
+import type { ISOTimestamp, RoleRow, ShopRow, UserRow, UUID } from "@jakoda/shared";
 import type { Permission } from "./permissions.js";
 
 /** Shape returned by get_my_context() — one round trip after login. */

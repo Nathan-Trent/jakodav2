@@ -46,7 +46,7 @@ allocation. `record_sale()` not yet exercised — it requires a real
 **Not done in Stage 1:**
 - Rust toolchain not installed on dev machine —
   `src-tauri` written but uncompiled. Icons not generated
-  (`npm run tauri -w @jakodav/desktop -- icon <png>`).
+  (`npm run tauri -w @jakoda/desktop -- icon <png>`).
 - No `expenses`, `tax_rules`, `tax_periods`, `manager_pins` tables yet —
   they belong to Stages 2/6 and were deliberately left out.
 - `sales.void` permission exists but no void function/path yet (Stage 3).
@@ -89,7 +89,7 @@ creation; weekly rotating manager PIN.
     owner and bypassed RLS — cross-tenant + cost leak). `device_status` same.
   - Column-level grants: `users` (name/phone only), `devices`
     (credential_hash never readable), `shop_invitations` (revoke only).
-- TS `@jakodav/auth-permissions`: `AuthRepository` covering all of the above
+- TS `@jakoda/auth-permissions`: `AuthRepository` covering all of the above
   + typed `MyContext`, device/invitation/override row types.
 
 **Not done / notes:**
@@ -132,6 +132,34 @@ Real sales flow against one shop (add item → sell → hits database).
   UI is styled properly.
 - Device credential in localStorage (Stage 5 moves it to native store).
 - Vercel is wrongly pointed at `apps/desktop` — pause until Stage 8.
+
+## Stage 3b — App shell, dashboard, design system (added at Nathan's request)
+Status: IN PROGRESS — built; `0005_dashboard.sql` NOT YET APPLIED
+Not in the TRD sequence as a stage; Nathan asked for the product to read as
+a system (navigation, owner overview, role-aware views, honest "coming
+soon" sections) before barcodes, and for Zogal's design system to be used
+as Jakoda's (different brand, same system).
+
+**Built (2026-09-11):**
+- Product renamed **Jakoda** (was "JakoDav"); npm scope `@jakoda/*`.
+- Design system from `zogal.app/docs/design_system.md`: Manrope, green
+  hierarchy (Forest/Deep/Action/Signal/Mint), solid cards + elevation (no
+  blur), 16px cards / 10px buttons / pill badges, tabular-num money at 800,
+  Tabler outline icons, sentence case. Light default, `.dark` tokens present.
+- `AppShell` (Forest sidebar, role-gated nav from `lib/nav.ts`; unbuilt
+  sections marked "soon" and render `ComingSoonScreen` with stage + scope).
+- `DashboardScreen`: takings, gross profit (view_cost only), stock on hand
+  + value, low stock, 7-day bars, terminals online, staff count, recent
+  sales with seller + lines. Salesperson variant: own sales + quick actions.
+- `ItemsScreen` (table, search, stock badges, avg cost/value gated),
+  `DevicesScreen` (online status, revoke), `PosScreen` refit into shell,
+  `AuthFrame` for login/setup.
+- `0005_dashboard.sql`: `shop_dashboard(shop_id)` — one permission-aware
+  RPC (sales.view_all → shop vs own; items.view_cost → profit/value).
+
+**Not done:** Dark-mode toggle UI; Purchases/Expenses/Staff/Reports/Tax/
+Settings are placeholders by design (their stages). Dashboard shows zeros
+until 0005 is applied.
 
 ## Stage 4 — Barcode system
 Status: NOT STARTED
@@ -193,6 +221,11 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   SECURITY DEFINER SQL (no server). Found + fixed an RLS bypass in 0001's
   `item_stock` view. `tsc -b` / eslint / 8 tests green. Migration handed to
   Nathan; not applied. Next: apply 0002, smoke-test with a real signup.
+- **2026-09-11** — Stage 3b: rename to Jakoda; Zogal design system applied;
+  app shell + dashboard + items + terminals pages; `0005_dashboard.sql`
+  handed to Nathan. Verified in browser. Dev note: Tabler icons is ~12k
+  files — never run two npm installs concurrently (corrupted once, Vite
+  optimizer cache had to be cleared).
 - **2026-09-11** — Stage 3 DONE. 0004 applied; real sale verified in DB
   (2 × ₦90,000 from ₦62,000 batch, profit ₦56,000, device_id set).
   shadcn/ui adopted. Disk-full blocked Build Tools install (3.4 GB free)

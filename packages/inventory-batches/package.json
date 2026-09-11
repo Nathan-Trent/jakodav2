@@ -1,12 +1,12 @@
 {
-  "name": "@jakodav/inventory-batches",
+  "name": "@jakoda/inventory-batches",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "@jakodav/shared": "*",
+    "@jakoda/shared": "*",
     "zod": "^4.4.0"
   }
 }

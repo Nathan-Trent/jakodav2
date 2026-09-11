@@ -1,96 +1,175 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/manrope";
 
-/* shadcn/ui token structure (same as Zogal). Palette is a PLACEHOLDER —
-   Nathan will supply brand colours; swap the values in :root / .dark only. */
+/* ============================================================
+   Jakoda design system — Zogal's system applied to a different brand.
+   Source of truth for the rules: zogal.app/docs/design_system.md.
+
+   Palette: the green hierarchy, used by job, never by taste:
+     Forest / Deep Green → trust and structure (foundations)
+     Action Green        → the thing you tap (light mode)
+     Signal Green        → the thing you tap (dark mode)
+     Soft Mint           → atmosphere, never a subject
+   Cards are solid fills + elevation shadows. No backdrop blur (locked).
+   Money is the heaviest thing on any screen (800, tabular-nums).
+   Sentence case everywhere. Tabler outline icons.
+   ============================================================ */
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-status-green: var(--status-green);
-  --color-status-amber: var(--status-amber);
-  --color-status-red: var(--status-red);
-  --font-sans: "Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-}
-
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.985 0.002 200);
-  --foreground: oklch(0.2 0.02 220);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 220);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 220);
-  --primary: oklch(0.5 0.1 180);            /* placeholder teal */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.955 0.005 200);
-  --secondary-foreground: oklch(0.25 0.02 220);
-  --muted: oklch(0.955 0.005 200);
-  --muted-foreground: oklch(0.5 0.02 220);
-  --accent: oklch(0.955 0.005 200);
-  --accent-foreground: oklch(0.25 0.02 220);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.005 200);
-  --input: oklch(0.9 0.005 200);
-  --ring: oklch(0.5 0.1 180);
-  --status-green: oklch(0.55 0.15 155);
-  --status-amber: oklch(0.7 0.16 70);
-  --status-red: oklch(0.577 0.245 27.325);
+  --jk-forest: #062C1A;
+  --jk-deep-green: #104E2F;
+  --jk-action-green: #16A34A;
+  --jk-signal-green: #4ADE80;
+  --jk-soft-mint: #C6E5D5;
+  --jk-near-white: #F8FAF9;
+  --jk-ink: #101418;
+  --jk-muted: #66706B;
+
+  /* Type scale (Manrope) */
+  --text-display: 40px;
+  --text-figure: 28px;
+  --text-heading: 22px;
+  --text-title: 17px;
+  --text-subheading: 15px;
+  --text-body: 14px;
+  --text-small: 13px;
+  --text-caption: 12px;
+  --text-micro: 11px;
 }
 
-.dark {
-  --background: oklch(0.16 0.01 220);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.01 220);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.01 220);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.12 180);
-  --primary-foreground: oklch(0.16 0.01 220);
-  --secondary: oklch(0.27 0.01 220);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.27 0.01 220);
-  --muted-foreground: oklch(0.7 0.01 220);
-  --accent: oklch(0.27 0.01 220);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.7 0.19 22);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.12 180);
-  --status-green: oklch(0.72 0.15 155);
-  --status-amber: oklch(0.8 0.16 70);
-  --status-red: oklch(0.7 0.19 22);
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-brand-forest: var(--jk-forest);
+  --color-brand-deep: var(--jk-deep-green);
+  --color-brand-action: var(--jk-action-green);
+  --color-brand-signal: var(--jk-signal-green);
+  --color-brand-mint: var(--jk-soft-mint);
+  --color-status-green: rgb(var(--status-green));
+  --color-status-amber: rgb(var(--status-amber));
+  --color-status-red: rgb(var(--status-red));
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-muted: hsl(var(--sidebar-muted));
+  --color-sidebar-active: hsl(var(--sidebar-active));
+  --font-sans: "Manrope Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-elev-1: 0 1px 2px rgb(6 44 26 / 0.06), 0 2px 6px rgb(6 44 26 / 0.05);
+  --shadow-elev-2: 0 4px 8px rgb(6 44 26 / 0.06), 0 14px 30px rgb(6 44 26 / 0.08);
+  --shadow-elev-3: 0 8px 16px rgb(6 44 26 / 0.10), 0 24px 48px rgb(6 44 26 / 0.12);
+  --shadow-action: 0 4px 14px rgb(22 163 74 / 0.35);
 }
 
 @layer base {
-  * { @apply border-border outline-ring/50; }
+  :root {
+    --background: 160 12% 98%;
+    --foreground: 213 12% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 213 12% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 12% 8%;
+    /* primary = Action Green: the thing you tap */
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 155 20% 96%;
+    --secondary-foreground: 213 12% 8%;
+    --muted: 155 20% 96%;
+    --muted-foreground: 150 4% 42%;
+    --accent: 155 20% 94%;
+    --accent-foreground: 213 12% 8%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 155 14% 90%;
+    --input: 155 14% 90%;
+    --ring: 142 76% 36%;
+    --status-green: 22 163 74;
+    --status-amber: 234 179 8;
+    --status-red: 239 68 68;
+    /* Sidebar is Forest — the brand foundation holds the frame */
+    --sidebar: 152 76% 10%;
+    --sidebar-foreground: 160 12% 98%;
+    --sidebar-muted: 150 15% 70%;
+    --sidebar-active: 141 68% 65%;
+  }
+
+  .dark {
+    --background: 152 76% 10%;
+    --foreground: 160 12% 98%;
+    --card: 152 65% 14%;
+    --card-foreground: 160 12% 98%;
+    --popover: 152 65% 14%;
+    --popover-foreground: 160 12% 98%;
+    --primary: 141 68% 65%;
+    --primary-foreground: 152 76% 10%;
+    --secondary: 152 55% 18%;
+    --secondary-foreground: 160 12% 98%;
+    --muted: 152 55% 18%;
+    --muted-foreground: 150 15% 70%;
+    --accent: 152 55% 18%;
+    --accent-foreground: 160 12% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 152 48% 22%;
+    --input: 152 48% 22%;
+    --ring: 141 68% 65%;
+    --sidebar: 152 80% 7%;
+    --sidebar-foreground: 160 12% 98%;
+    --sidebar-muted: 150 15% 60%;
+    --sidebar-active: 141 68% 65%;
+  }
+
+  * { @apply border-border outline-ring/50; -webkit-tap-highlight-color: transparent; }
   html, body, #root { height: 100%; }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-size: var(--text-body);
+    line-height: 1.5;
+    font-feature-settings: "rlig" 1, "calt" 1;
     /* POS terminal: never let the webview select/drag UI chrome */
     user-select: none;
   }
   input, textarea, [contenteditable] { user-select: text; }
+}
+
+@layer utilities {
+  /* Money: heaviest thing on the screen, always tabular. */
+  .figure { font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.1; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .text-display { font-size: var(--text-display); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
+  .text-figure { font-size: var(--text-figure); }
+  .text-heading { font-size: var(--text-heading); font-weight: 700; line-height: 1.2; }
+  .text-title { font-size: var(--text-title); font-weight: 700; }
+  .text-subheading { font-size: var(--text-subheading); font-weight: 600; }
+  .text-small { font-size: var(--text-small); }
+  .text-caption { font-size: var(--text-caption); }
+  .text-micro { font-size: var(--text-micro); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .elev-1 { box-shadow: var(--shadow-elev-1); }
+  .elev-2 { box-shadow: var(--shadow-elev-2); }
+  .elev-3 { box-shadow: var(--shadow-elev-3); }
+  /* Card press: physical, 0.18s, no blur */
+  .pressable { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+  .pressable:active { transform: translateY(1px) scale(0.982); box-shadow: var(--shadow-elev-1); }
 }

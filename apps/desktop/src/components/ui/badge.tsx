@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
+  "inline-flex items-center justify-center rounded-full border px-[9px] py-[3px] text-[11px] font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
   {
     variants: {
       variant: {
@@ -12,8 +12,9 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
         destructive: "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90",
         outline: "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-        success: "border-transparent bg-status-green/15 text-status-green",
-        warning: "border-transparent bg-status-amber/15 text-status-amber",
+        success: "bg-[#DCFCE7] text-[#15803D] border-[#BBF7D0] dark:bg-status-green/15 dark:text-brand-signal dark:border-status-green/25",
+        warning: "bg-[#FEF9C3] text-[#A16207] border-[#FDE68A] dark:bg-status-amber/15 dark:text-[#FCD34D] dark:border-status-amber/25",
+        critical: "bg-[#FEE2E2] text-[#B91C1C] border-[#FECACA] dark:bg-status-red/15 dark:text-[#F87171] dark:border-status-red/25",
       },
     },
     defaultVariants: { variant: "default" },
