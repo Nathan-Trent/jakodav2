@@ -13,10 +13,10 @@
  * authenticates the device against Postgres, reads state that Postgres already
  * computed, signs it, and hands it back.
  *
- * Deploy:
- *   deno run -A supabase/functions/issue-subscription-token/keygen.ts   # once
- *   supabase secrets set SUBSCRIPTION_PRIVATE_KEY=<private key from keygen>
- *   supabase functions deploy issue-subscription-token --no-verify-jwt
+ * Deploy (see BUILD_LOG "Stage 5 setup" for the walkthrough):
+ *   node scripts/generate-subscription-keys.mjs     # once, prints both keys
+ *   npx supabase secrets set SUBSCRIPTION_PRIVATE_KEY=<private>
+ *   npx supabase functions deploy issue-subscription-token --no-verify-jwt
  *
  * --no-verify-jwt is deliberate: a terminal that has been logged out still
  * needs to refresh its token. It authenticates with the device credential,
