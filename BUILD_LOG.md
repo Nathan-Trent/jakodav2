@@ -257,10 +257,20 @@ Edge Function NOT YET DEPLOYED.
 - Stock refresh uses a broadcast channel, not postgres_changes, because RLS
   hides other terminals' sales from a salesperson.
 
+**Fixed after first live test (2026-09-11):**
+- **CORS**: the Edge Function had no CORS headers and answered the browser's
+  OPTIONS preflight with 405, so every call from the app was blocked before
+  it began. curl passed throughout because curl ignores CORS — a reminder
+  that testing an endpoint is not testing the client's path to it.
+- **Gating was too strict, in the exact way I said it must never be.** An
+  unverifiable token forced read-only even while the terminal was online and
+  the server had just accepted it. The token exists to police the OFFLINE
+  case; while syncing, the server is the authority. Now: unverifiable +
+  recently synced → full use with a visible warning; unverifiable + not
+  syncing → read-only. Two tests pin this.
+
 **Not done:**
-- 0008 not applied; Edge Function not deployed; no keypair generated yet, so
-  gating is inert (no public key → gating off, deliberately fail-open so a
-  missing key can't lock a real shop out).
+- 0008 applied and keys generated; Edge Function needs a redeploy for CORS.
 - Offline path not yet exercised end to end against a real outage.
 - Device credential still in localStorage.
 - Purchases/expenses are not queued offline yet — only sales.

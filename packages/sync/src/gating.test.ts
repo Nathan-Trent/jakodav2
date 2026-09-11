@@ -78,10 +78,17 @@ describe("evaluateGate — subscription expiry", () => {
 });
 
 describe("evaluateGate — trust", () => {
-  it("treats an unverifiable token as no permission, not as permission", () => {
-    const d = evaluateGate(input({ tokenValid: false }));
-    expect(d.level).toBe("read_only");
+  it("keeps selling when the token is unverifiable but the server is still reachable", () => {
+    // A misconfigured signing key must never take a paying shop's till away.
+    const d = evaluateGate(input({ tokenValid: false, elapsedSinceSyncSeconds: 60 }));
+    expect(d.level).toBe("full");
     expect(d.reason).toBe("token_invalid");
+    expect(d.warn).toBe(true);
+  });
+
+  it("blocks an unverifiable token once the terminal stops syncing too", () => {
+    const d = evaluateGate(input({ tokenValid: false, elapsedSinceSyncSeconds: 6 * DAY }));
+    expect(d.level).toBe("read_only");
   });
 
   it("gives a never-synced terminal one window, then read-only", () => {

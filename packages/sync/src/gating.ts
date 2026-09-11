@@ -72,10 +72,26 @@ export function evaluateGate(input: GateInput): GateDecision {
              daysLeft(policy.mandatorySyncDays * DAY - input.elapsedSinceSyncSeconds), true);
   }
 
-  // A token we cannot verify is treated as absent, not as permission.
+  // A token we cannot verify is not permission — but it is not proof of
+  // non-payment either, and a shop must never lose its till because our
+  // signing setup is misconfigured.
+  //
+  // The token exists to police the OFFLINE case. While the terminal is still
+  // reaching the server, the SERVER is the authority: it accepted this device
+  // moments ago and would have said so if the subscription were cancelled.
+  // So an unverifiable token blocks nothing until the terminal also stops
+  // syncing — at which point the normal cadence rules take over anyway.
   if (!input.tokenValid) {
-    return gate("read_only", "token_invalid", "Subscription can't be verified",
-                "Connect to the internet so this terminal can check its subscription.", null, false);
+    const syncedRecently = input.elapsedSinceSyncSeconds < policy.mandatorySyncDays * DAY;
+    if (!syncedRecently) {
+      return gate("read_only", "token_invalid", "Subscription can't be verified",
+                  "Connect to the internet so this terminal can check its subscription.", null, false);
+    }
+    // Reachable but unverifiable: keep selling, and make the problem visible
+    // so it gets fixed rather than silently ignored.
+    return gate("full", "token_invalid", "Subscription not verified",
+                "This terminal is working normally. If this keeps showing, the subscription key needs attention.",
+                null, true);
   }
 
   if (input.status === "cancelled") {

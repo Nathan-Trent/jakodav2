@@ -32,6 +32,17 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  *  sync cycle; long enough to outlive the mandatory 5-day sync window. */
 const TOKEN_TTL_DAYS = 14;
 
+/**
+ * The desktop app calls this from a webview, so the browser sends a CORS
+ * preflight first and drops the response without these headers. Omitting them
+ * silently broke every call from the app while curl worked fine.
+ */
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "authorization, apikey, content-type",
+  "access-control-allow-methods": "POST, OPTIONS",
+};
+
 function b64urlEncode(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -42,17 +53,20 @@ async function importPrivateKey(): Promise<CryptoKey> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
-  if (!PRIVATE_KEY_B64) return new Response(JSON.stringify({ error: "signing key not configured" }), { status: 500 });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: CORS });
+  if (!PRIVATE_KEY_B64) {
+    return new Response(JSON.stringify({ error: "signing key not configured" }), { status: 500, headers: { ...CORS, "content-type": "application/json" } });
+  }
 
   let body: { device_id?: string; credential?: string; monotonic_seconds?: number; wall_clock_seconds?: number };
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "invalid JSON" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "invalid JSON" }), { status: 400, headers: { ...CORS, "content-type": "application/json" } });
   }
   if (!body.device_id || !body.credential) {
-    return new Response(JSON.stringify({ error: "device_id and credential are required" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "device_id and credential are required" }), { status: 400, headers: { ...CORS, "content-type": "application/json" } });
   }
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
@@ -68,7 +82,7 @@ Deno.serve(async (req) => {
   });
   if (error) {
     // Wrong credential or revoked device — say so, reveal nothing else.
-    return new Response(JSON.stringify({ error: "unknown or revoked device" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "unknown or revoked device" }), { status: 401, headers: { ...CORS, "content-type": "application/json" } });
   }
 
   const state = data as {
@@ -102,6 +116,6 @@ Deno.serve(async (req) => {
   await db.rpc("store_subscription_token", { p_device_id: state.device_id, p_token: token });
 
   return new Response(JSON.stringify({ token, payload }), {
-    headers: { "content-type": "application/json" },
+    headers: { ...CORS, "content-type": "application/json" },
   });
 });
