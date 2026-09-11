@@ -9,6 +9,7 @@ import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PosScreen } from "@/screens/PosScreen";
 import { ItemsScreen } from "@/screens/ItemsScreen";
 import { DevicesScreen } from "@/screens/DevicesScreen";
+import { PurchasesScreen } from "@/screens/PurchasesScreen";
 import { ComingSoonScreen } from "@/screens/ComingSoonScreen";
 
 export function App() {
@@ -41,6 +42,7 @@ function Router() {
   else if (current.key === "sell") content = <PosScreen />;
   else if (current.key === "items") content = <ItemsScreen />;
   else if (current.key === "devices") content = <DevicesScreen />;
+  else if (current.key === "purchases") content = <PurchasesScreen />;
   else content = <DashboardScreen onNavigate={setPage} />;
 
   return (

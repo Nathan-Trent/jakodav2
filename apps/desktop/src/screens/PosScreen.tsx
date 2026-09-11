@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IconBarcode, IconPlus, IconTrash } from "@tabler/icons-react";
 import type { ItemRow, SaleRow } from "@jakoda/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@jakoda/shared";
 import { PageHeader } from "@/components/AppShell";
@@ -11,7 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { errorMessage, useSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
+import { getSupabase } from "@/lib/supabase";
+import { notifyError, notifyInfo, notifySuccess } from "@/lib/feedback";
+import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
+import { Alert } from "@/components/Alert";
+import { announceStockChange, lookupBarcode, stockChannel } from "@jakoda/inventory-batches";
 import { cn } from "@/lib/utils";
 
 interface CartLine {
@@ -40,6 +44,8 @@ export function PosScreen() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [busy, setBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [lastScan, setLastScan] = useState<{ code: string; ok: boolean; name?: string } | null>(null);
+  const channelRef = useRef<ReturnType<typeof stockChannel> | null>(null);
 
   // sales RLS already limits a salesperson to their own sales
   const load = useCallback(async () => {
@@ -61,8 +67,41 @@ export function PosScreen() {
   }, [inventory, shop.id, viewCost]);
 
   useEffect(() => {
-    load().catch((e) => toast.error(errorMessage(e)));
+    load().catch((e) => notifyError(e));
   }, [load]);
+
+  // SYNC: other terminals announce stock changes on a per-shop broadcast
+  // channel; we refetch quantities. Polling every 30s covers a missed message.
+  useEffect(() => {
+    const db = getSupabase();
+    const ch = stockChannel(db, shop.id);
+    ch.on("broadcast", { event: "stock" }, () => { void inventory.stockQuantities(shop.id).then(setStock).catch(() => {}); });
+    ch.subscribe();
+    channelRef.current = ch;
+    const poll = window.setInterval(() => { void inventory.stockQuantities(shop.id).then(setStock).catch(() => {}); }, 30_000);
+    return () => { window.clearInterval(poll); void db.removeChannel(ch); channelRef.current = null; };
+  }, [inventory, shop.id]);
+
+  // Barcode scanner (keyboard-wedge). Unknown codes say only "not recognised"
+  // — never whether the code exists elsewhere (PRD §5.3).
+  useBarcodeScanner(async (code) => {
+    if (!can("sales.create")) return;
+    try {
+      const hit = await lookupBarcode(getSupabase(), shop.id, code);
+      if (!hit || !hit.is_active) {
+        setLastScan({ code, ok: false });
+        notifyInfo("Barcode not recognised", `${code} isn't attached to any item in ${shop.name}.`);
+        return;
+      }
+      const item = items.find((i) => i.id === hit.item_id);
+      if (!item) { await load(); }
+      const resolved = item ?? items.find((i) => i.id === hit.item_id);
+      if (resolved) addToCart(resolved);
+      setLastScan({ code, ok: true, name: hit.name });
+    } catch (e) {
+      notifyError(e);
+    }
+  }, { enabled: !showAdd });
 
   function addToCart(item: ItemRow) {
     setCart((c) => {
@@ -105,10 +144,11 @@ export function PosScreen() {
         })),
       });
       setCart([]);
-      toast.success(`Sale recorded — ${formatNaira(toKobo(sale.total))}`);
+      notifySuccess(`Sale recorded — ${formatNaira(toKobo(sale.total))}`, { description: `${sale.id.slice(0, 8)} · ${new Date(sale.sold_at).toLocaleTimeString()}` });
       await load();
+      if (channelRef.current) void announceStockChange(channelRef.current, device?.device_id ?? null);
     } catch (e) {
-      toast.error(errorMessage(e));
+      notifyError(e);
     } finally {
       setBusy(false);
     }
@@ -116,16 +156,22 @@ export function PosScreen() {
 
   return (
     <div className="h-full grid grid-rows-[auto_1fr]">
-      <PageHeader title="Sell" description="Tap items to build the sale. Price can go above suggested, never below floor."
+      <PageHeader title="Sell" description="Scan a barcode or tap an item. Price can go above suggested, never below floor."
         actions={can("items.create") && <Button variant="outline" onClick={() => setShowAdd(true)}><IconPlus size={16} /> Add item</Button>} />
 
       <div className="grid grid-cols-[minmax(0,1fr)_380px] min-h-0">
         {/* Items */}
         <section className="overflow-y-auto px-8 pb-8 grid gap-6 content-start">
+          {lastScan && (
+            <Alert tone={lastScan.ok ? "success" : "warning"} title={lastScan.ok ? `Scanned: ${lastScan.name}` : "Barcode not recognised"}
+              action={<button className="text-caption underline" onClick={() => setLastScan(null)}>Dismiss</button>}>
+              <span className="font-mono">{lastScan.code}</span>{lastScan.ok ? " added to the sale." : ` — not attached to any item here. Attach it under Items.`}
+            </Alert>
+          )}
           {items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No items yet.{can("items.create") ? " Add your first item to start selling." : ""}
-            </p>
+            <Alert tone="info" title="No items yet" action={can("items.create") ? <Button size="sm" onClick={() => setShowAdd(true)}><IconPlus size={14} /> Add item</Button> : undefined}>
+              {can("items.create") ? "Add your first item, then scan or tap it to sell." : "Ask the shop owner to add items."}
+            </Alert>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
               {items.map((it) => {
@@ -188,7 +234,9 @@ export function PosScreen() {
         {/* Cart */}
         <aside className="border-l bg-card p-5 flex flex-col gap-3 overflow-y-auto">
           <h2 className="font-medium">Sale</h2>
-          {cart.length === 0 && <p className="text-sm text-muted-foreground">Tap an item to add it.</p>}
+          {cart.length === 0 && (
+            <div className="text-sm text-muted-foreground flex items-center gap-2"><IconBarcode size={16} /> Scan a barcode or tap an item to add it.</div>
+          )}
           {cart.map((l) => {
             const floor = toKobo(l.item.floor_price);
             const below = l.unitPrice < floor;
@@ -238,7 +286,7 @@ export function PosScreen() {
         onOpenChange={setShowAdd}
         onDone={async (name) => {
           setShowAdd(false);
-          toast.success(`Added “${name}”`);
+          notifySuccess(`Added “${name}”`);
           await load();
         }}
       />

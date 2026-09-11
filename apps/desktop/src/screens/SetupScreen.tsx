@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
 import { AuthFrame } from "@/components/AuthFrame";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { errorMessage, useSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
+import { notifyError, notifySuccess } from "@/lib/feedback";
 import { defaultDeviceName } from "@/lib/device";
 
 /**
@@ -32,7 +32,7 @@ export function SetupScreen() {
     try {
       await fn();
     } catch (e) {
-      toast.error(errorMessage(e));
+      notifyError(e);
     } finally {
       setBusy(false);
     }
@@ -50,7 +50,7 @@ export function SetupScreen() {
     e.preventDefault();
     void run(async () => {
       setDevice(await auth.activateDevice(code, deviceName));
-      toast.success("Terminal activated");
+      notifySuccess("Terminal activated", { description: "This install is now bound to the shop." });
     });
   }
 
@@ -58,7 +58,7 @@ export function SetupScreen() {
     void run(async () => {
       const { code } = await auth.createActivationCode(shopId);
       setDevice(await auth.activateDevice(code, deviceName));
-      toast.success("Terminal activated");
+      notifySuccess("Terminal activated", { description: "This install is now bound to the shop." });
     });
   }
 

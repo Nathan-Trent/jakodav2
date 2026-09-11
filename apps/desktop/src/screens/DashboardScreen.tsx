@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { IconAlertTriangle, IconArrowRight, IconRefresh } from "@tabler/icons-react";
-import { toast } from "sonner";
 import { fetchRecentSales, fetchShopDashboard, type RecentSale, type ShopDashboard } from "@jakoda/inventory-batches";
 import { formatNaira, toKobo, type Kobo } from "@jakoda/shared";
 import { PageHeader } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { errorMessage, useSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
+import { notifyError } from "@/lib/feedback";
 import { getSupabase } from "@/lib/supabase";
 import type { PageKey } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -38,7 +38,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
       setData(d);
       setRecent(r);
     } catch (e) {
-      toast.error(errorMessage(e));
+      notifyError(e);
     } finally {
       setLoading(false);
     }

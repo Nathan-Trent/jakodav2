@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
 import { fromKobo, toKobo } from "@jakoda/shared";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { errorMessage, useSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
+import { notifyError } from "@/lib/feedback";
 
 /** Add item + initial stock. Cost is only asked for if the user may record purchases. */
 export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (name: string) => Promise<void> }) {
@@ -40,7 +40,7 @@ export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; o
       setName(""); setFloor(""); setSuggested(""); setQty(""); setCost("");
       await onDone(item.name);
     } catch (err) {
-      toast.error(errorMessage(err));
+      notifyError(err);
     } finally {
       setBusy(false);
     }

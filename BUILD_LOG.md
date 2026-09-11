@@ -134,7 +134,9 @@ Real sales flow against one shop (add item → sell → hits database).
 - Vercel is wrongly pointed at `apps/desktop` — pause until Stage 8.
 
 ## Stage 3b — App shell, dashboard, design system (added at Nathan's request)
-Status: IN PROGRESS — built; `0005_dashboard.sql` NOT YET APPLIED
+Status: DONE (2026-09-11) — 0005 applied; palette settled on Zogal's greens
+after trying an emerald-teal variant and a zinc/gold + cut-corner direction
+(both reverted at Nathan's call).
 Not in the TRD sequence as a stage; Nathan asked for the product to read as
 a system (navigation, owner overview, role-aware views, honest "coming
 soon" sections) before barcodes, and for Zogal's design system to be used
@@ -162,9 +164,47 @@ Settings are placeholders by design (their stages). Dashboard shows zeros
 until 0005 is applied.
 
 ## Stage 4 — Barcode system
-Status: NOT STARTED
+Status: IN PROGRESS — built; `0006_barcodes.sql` NOT YET APPLIED
 Scanning, multi-terminal support, barcode generation with uniqueness
-checking, label printing. (`barcodes` table exists; generation logic does not.)
+checking, label printing.
+
+**Built (2026-09-11):**
+- `0006_barcodes.sql`: `generate_barcode(item)` — EAN-13 with GS1 in-store
+  prefix `2` + check digit (`ean13_check_digit`), unique per shop, retries
+  on collision; `lookup_barcode(shop, code)` (RLS → foreign codes are just
+  "not recognised"); `barcodes_delete` policy; `set_item_prices()` atomic
+  floor/suggested change writing `price_changes` (floor needs
+  `items.edit_floor_price`); direct price updates on `items` revoked.
+- Scanner: `useBarcodeScanner` — keyboard-wedge burst detection (≤35 ms
+  between keys, Enter-terminated), swallows the burst so it never lands in
+  a focused input. Active on Sell and Purchases.
+- Sell: scan → add to cart; unknown code → "not recognised" only. SYNC:
+  per-shop Supabase **broadcast** channel `shop:<id>:stock` — a terminal
+  announces after sale/restock, others refetch quantities; 30 s polling
+  fallback. (Chose broadcast over postgres_changes because RLS would hide
+  other terminals' sales from a salesperson.)
+- Items: barcode column, nudge when items lack one; `ItemDialog` —
+  generate / attach manufacturer code (EAN-13 check-digit validated) /
+  remove (confirm) / **print labels** (JsBarcode → SVG → print dialog; A4
+  38×21 mm sheet or 50×30 mm roll; "Save as PDF" via the OS dialog) /
+  edit selling prices with reason.
+- Purchases screen: scan or pick items, qty + cost, one immutable batch per
+  line; cost-change detection → after saving, PRD §6.3 dialog asks whether
+  to apply new selling prices (logged, all stock); recent batches table
+  (view_cost only).
+- UX pass (Norman/Nielsen, standing rule from Nathan): `lib/errors.ts` maps
+  DB errors to plain language + recovery step; `lib/feedback.tsx`
+  (`notifyError/Success/Info`); `Alert` (persistent inline) and
+  `ConfirmDialog` (named actions, safe default) replace browser
+  alert/confirm; all screens migrated. Collapsible sidebar (icon rail,
+  remembered, Ctrl+B); connection status dot always visible.
+- Tests: EAN-13 validation + manual-code schema (12 tests total green).
+
+**Not done:**
+- Real USB scanner not yet tested on hardware (logic verified by timing
+  model only) — Nathan to test with the shop's scanner.
+- `purchase_cost_corrections` UI (admin cost override) — next.
+- Multi-terminal broadcast verified in code only; needs two terminals.
 
 ## Stage 5 — Offline-first & sync
 Status: NOT STARTED
@@ -221,6 +261,11 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   SECURITY DEFINER SQL (no server). Found + fixed an RLS bypass in 0001's
   `item_stock` view. `tsc -b` / eslint / 8 tests green. Migration handed to
   Nathan; not applied. Next: apply 0002, smoke-test with a real signup.
+- **2026-09-11** — Stage 4 built: barcodes (EAN-13 generation, scanner hook,
+  labels), Purchases screen with cost-change price prompt, live stock via
+  broadcast, collapsible sidebar, UX layer (errors/feedback/Alert/Confirm).
+  `0006_barcodes.sql` handed to Nathan. Palette experiments reverted to
+  Zogal greens. Next: Nathan applies 0006 + tests real scanner.
 - **2026-09-11** — Stage 3b: rename to Jakoda; Zogal design system applied;
   app shell + dashboard + items + terminals pages; `0005_dashboard.sql`
   handed to Nathan. Verified in browser. Dev note: Tabler icons is ~12k

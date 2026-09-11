@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
 import { AuthFrame } from "@/components/AuthFrame";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { errorMessage, useSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
+import { notifyError, notifySuccess } from "@/lib/feedback";
 
 export function LoginScreen() {
   const { auth } = useSession();
@@ -21,14 +21,14 @@ export function LoginScreen() {
     try {
       if (mode === "signup") {
         await auth.signUp({ email, password, fullName });
-        toast.success("Account created", { description: "If email confirmation is on, check your inbox, then sign in." });
+        notifySuccess("Account created", { description: "If email confirmation is on, check your inbox, then sign in." });
         setMode("signin");
       } else {
         await auth.signIn({ email, password });
         // onAuthStateChange in SessionProvider takes it from here
       }
     } catch (err) {
-      toast.error(errorMessage(err));
+      notifyError(err);
     } finally {
       setBusy(false);
     }
