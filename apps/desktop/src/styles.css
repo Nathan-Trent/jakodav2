@@ -6,13 +6,11 @@
    Jakoda design system — Zogal's system applied to a different brand.
    Source of truth for the rules: zogal.app/docs/design_system.md.
 
-   Palette: Zogal's green *hierarchy*, Jakoda's own green *family*.
-   Zogal sits at hue ~142° (grass); Jakoda sits at ~165° (emerald-teal),
-   so the two products share a system without sharing a colour:
-     Deep Teal / Pine  → trust and structure (foundations)
-     Emerald           → the thing you tap (light mode)
-     Aqua              → the thing you tap (dark mode)
-     Sea Mint          → atmosphere, never a subject
+   Palette: the green hierarchy, used by job, never by taste:
+     Forest / Deep Green → trust and structure (foundations)
+     Action Green        → the thing you tap (light mode)
+     Signal Green        → the thing you tap (dark mode)
+     Soft Mint           → atmosphere, never a subject
    Cards are solid fills + elevation shadows. No backdrop blur (locked).
    Money is the heaviest thing on any screen (800, tabular-nums).
    Sentence case everywhere. Tabler outline icons.
@@ -20,14 +18,14 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --jk-forest: #052E2A;        /* Deep Teal */
-  --jk-deep-green: #0B4F45;    /* Pine */
-  --jk-action-green: #059669;  /* Emerald (emerald-600) */
-  --jk-signal-green: #2DD4BF;  /* Aqua (teal-400) */
-  --jk-soft-mint: #CCEDE4;     /* Sea Mint */
-  --jk-near-white: #F7FAF9;
-  --jk-ink: #0F1614;
-  --jk-muted: #62716C;
+  --jk-forest: #062C1A;
+  --jk-deep-green: #104E2F;
+  --jk-action-green: #16A34A;
+  --jk-signal-green: #4ADE80;
+  --jk-soft-mint: #C6E5D5;
+  --jk-near-white: #F8FAF9;
+  --jk-ink: #101418;
+  --jk-muted: #66706B;
 
   /* Type scale (Manrope) */
   --text-display: 40px;
@@ -79,68 +77,68 @@
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-xl: 20px;
-  --shadow-elev-1: 0 1px 2px rgb(5 46 42 / 0.06), 0 2px 6px rgb(5 46 42 / 0.05);
-  --shadow-elev-2: 0 4px 8px rgb(5 46 42 / 0.06), 0 14px 30px rgb(5 46 42 / 0.08);
-  --shadow-elev-3: 0 8px 16px rgb(5 46 42 / 0.10), 0 24px 48px rgb(5 46 42 / 0.12);
-  --shadow-action: 0 4px 14px rgb(5 150 105 / 0.35);
+  --shadow-elev-1: 0 1px 2px rgb(6 44 26 / 0.06), 0 2px 6px rgb(6 44 26 / 0.05);
+  --shadow-elev-2: 0 4px 8px rgb(6 44 26 / 0.06), 0 14px 30px rgb(6 44 26 / 0.08);
+  --shadow-elev-3: 0 8px 16px rgb(6 44 26 / 0.10), 0 24px 48px rgb(6 44 26 / 0.12);
+  --shadow-action: 0 4px 14px rgb(22 163 74 / 0.35);
 }
 
 @layer base {
   :root {
-    --background: 165 14% 98%;
-    --foreground: 170 18% 7%;
+    --background: 160 12% 98%;
+    --foreground: 213 12% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 170 18% 7%;
+    --card-foreground: 213 12% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 170 18% 7%;
-    /* primary = Emerald: the thing you tap */
-    --primary: 160 94% 30%;
+    --popover-foreground: 213 12% 8%;
+    /* primary = Action Green: the thing you tap */
+    --primary: 142 76% 36%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 165 22% 96%;
-    --secondary-foreground: 170 18% 7%;
-    --muted: 165 22% 96%;
-    --muted-foreground: 165 7% 42%;
-    --accent: 165 22% 94%;
-    --accent-foreground: 170 18% 7%;
+    --secondary: 155 20% 96%;
+    --secondary-foreground: 213 12% 8%;
+    --muted: 155 20% 96%;
+    --muted-foreground: 150 4% 42%;
+    --accent: 155 20% 94%;
+    --accent-foreground: 213 12% 8%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 165 16% 90%;
-    --input: 165 16% 90%;
-    --ring: 160 94% 30%;
-    --status-green: 5 150 105;
+    --border: 155 14% 90%;
+    --input: 155 14% 90%;
+    --ring: 142 76% 36%;
+    --status-green: 22 163 74;
     --status-amber: 234 179 8;
     --status-red: 239 68 68;
-    /* Sidebar is Deep Teal — the brand foundation holds the frame */
-    --sidebar: 174 80% 10%;
-    --sidebar-foreground: 165 14% 98%;
-    --sidebar-muted: 168 16% 70%;
-    --sidebar-active: 172 66% 50%;
+    /* Sidebar is Forest — the brand foundation holds the frame */
+    --sidebar: 152 76% 10%;
+    --sidebar-foreground: 160 12% 98%;
+    --sidebar-muted: 150 15% 70%;
+    --sidebar-active: 141 68% 65%;
   }
 
   .dark {
-    --background: 174 80% 10%;
-    --foreground: 165 14% 98%;
-    --card: 174 65% 14%;
-    --card-foreground: 165 14% 98%;
-    --popover: 174 65% 14%;
-    --popover-foreground: 165 14% 98%;
-    --primary: 172 66% 50%;
-    --primary-foreground: 174 80% 10%;
-    --secondary: 174 55% 18%;
-    --secondary-foreground: 165 14% 98%;
-    --muted: 174 55% 18%;
-    --muted-foreground: 168 16% 70%;
-    --accent: 174 55% 18%;
-    --accent-foreground: 165 14% 98%;
+    --background: 152 76% 10%;
+    --foreground: 160 12% 98%;
+    --card: 152 65% 14%;
+    --card-foreground: 160 12% 98%;
+    --popover: 152 65% 14%;
+    --popover-foreground: 160 12% 98%;
+    --primary: 141 68% 65%;
+    --primary-foreground: 152 76% 10%;
+    --secondary: 152 55% 18%;
+    --secondary-foreground: 160 12% 98%;
+    --muted: 152 55% 18%;
+    --muted-foreground: 150 15% 70%;
+    --accent: 152 55% 18%;
+    --accent-foreground: 160 12% 98%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 174 48% 22%;
-    --input: 174 48% 22%;
-    --ring: 172 66% 50%;
-    --sidebar: 174 85% 7%;
-    --sidebar-foreground: 165 14% 98%;
-    --sidebar-muted: 168 16% 60%;
-    --sidebar-active: 172 66% 50%;
+    --border: 152 48% 22%;
+    --input: 152 48% 22%;
+    --ring: 141 68% 65%;
+    --sidebar: 152 80% 7%;
+    --sidebar-foreground: 160 12% 98%;
+    --sidebar-muted: 150 15% 60%;
+    --sidebar-active: 141 68% 65%;
   }
 
   * { @apply border-border outline-ring/50; -webkit-tap-highlight-color: transparent; }
