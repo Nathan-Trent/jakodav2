@@ -3,6 +3,7 @@ import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { toKobo } from "@zogal/shared";
 import { allocateFifo, applyAllocation, cogs, type OpenBatch, type ShopDashboard } from "@zogal/inventory-batches";
 import type { OutboxEntry } from "@zogal/sync";
+import type { BusinessCategory, ExpenseRow, FiledPeriod, LedgerSummary, ShopTaxProfile, TaxRule, TaxType } from "@zogal/tax-engine";
 
 /**
  * SYNC: snapshot ⊕ overlay — the calculation the till trusts offline.
@@ -25,6 +26,21 @@ export interface ShopSnapshot {
   dashboard: ShopDashboard | null;
   /** The shop's terminals, for names and the terminal filter. */
   devices: DeviceStatusRow[];
+  /** Tax: reference data, the shop's declaration, ledger windows, filings. Only with tax.view. */
+  tax: TaxSnapshot | null;
+  /** Expenses (PRD §6.4). Only with expenses.view / expenses.create. */
+  expenses: ExpenseRow[];
+}
+
+export interface TaxSnapshot {
+  taxTypes: TaxType[];
+  categories: BusinessCategory[];
+  rules: TaxRule[];
+  profile: (ShopTaxProfile & { declaredAt: string }) | null;
+  /** Ledger for the assessment year and the current month, as of the snapshot. */
+  year: LedgerSummary;
+  month: LedgerSummary;
+  filed: FiledPeriod[];
 }
 
 /** A sale as the screens see it: from the server, or still on this terminal. */
@@ -49,6 +65,11 @@ export interface ShopView {
   dashboard: ShopDashboard | null;
   /** How many unsent sales are folded into the figures above. */
   pendingSales: number;
+  /** Unsent sales' takings and (if costs are visible) profit — for the live tax figure. */
+  pendingTurnover: number;
+  pendingProfit: number | null;
+  tax: TaxSnapshot | null;
+  expenses: ExpenseRow[];
 }
 
 export interface OfflineSalePayload {
@@ -56,7 +77,7 @@ export interface OfflineSalePayload {
   note: string | null;
 }
 
-export const EMPTY_SNAPSHOT: ShopSnapshot = { items: [], barcodes: [], stock: {}, stockValue: {}, batches: [], purchases: [], sales: [], dashboard: null, devices: [] };
+export const EMPTY_SNAPSHOT: ShopSnapshot = { items: [], barcodes: [], stock: {}, stockValue: {}, batches: [], purchases: [], sales: [], dashboard: null, devices: [], tax: null, expenses: [] };
 
 /**
  * Apply unsent sales to the server's view. Pure; the calculation the till
@@ -68,7 +89,8 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
       items: snap.items, barcodes: snap.barcodes, stock: snap.stock, batches: snap.batches,
       purchases: snap.purchases, devices: snap.devices,
       sales: snap.sales.map((s) => ({ ...s, pending: false })),
-      dashboard: snap.dashboard, pendingSales: 0,
+      dashboard: snap.dashboard, pendingSales: 0, pendingTurnover: 0, pendingProfit: viewCost ? 0 : null,
+      tax: snap.tax, expenses: snap.expenses,
     };
   }
 
@@ -92,6 +114,29 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
     })
     .sort((a, b) => b.sold_at.localeCompare(a.sold_at));
   const sales: ViewSale[] = [...pendingSales, ...snap.sales.map((s) => ({ ...s, pending: false }))];
+
+  // All unsent sales' takings, and profit via local FIFO — feeds the live
+  // tax figure (they belong to the current month/year in practice).
+  let pendingTurnover = 0;
+  let pendingProfit: number | null = viewCost ? 0 : null;
+  {
+    let open: OpenBatch[] = viewCost
+      ? snap.batches.filter((b) => b.quantity_remaining > 0).map((b) => ({
+          id: b.id, purchasedAt: b.purchased_at, quantityRemaining: b.quantity_remaining, unitCost: toKobo(b.unit_cost),
+        }))
+      : [];
+    for (const e of overlay) for (const l of e.payload.lines) {
+      const price = toKobo(l.unit_price);
+      pendingTurnover += (price * l.quantity) / 100;
+      if (pendingProfit === null) continue;
+      const mine = open.filter((b) => snap.batches.find((sb) => sb.id === b.id)?.item_id === l.item_id);
+      try {
+        const alloc = allocateFifo(mine, l.quantity);
+        pendingProfit += (price * l.quantity - cogs(alloc)) / 100;
+        open = applyAllocation(open, alloc);
+      } catch { pendingProfit = null; }
+    }
+  }
 
   // Today's figures: add unsent sales that happened today (shop-local day
   // approximated by the terminal's day — the server recomputes on sync).
@@ -147,7 +192,8 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
   return {
     items: snap.items, barcodes: snap.barcodes, stock, batches: snap.batches,
     purchases: snap.purchases, devices: snap.devices,
-    sales, dashboard, pendingSales: overlay.length,
+    sales, dashboard, pendingSales: overlay.length, pendingTurnover, pendingProfit,
+    tax: snap.tax, expenses: snap.expenses,
   };
 }
 

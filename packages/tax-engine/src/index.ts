@@ -1,8 +1,16 @@
 /**
- * TAX ENGINE module — Stage 6. Not started.
+ * TAX ENGINE module — Stage 6 (TRD §8, PRD §5.5).
  *
  * Fully deterministic: evaluates versioned, effective-dated `tax_rules`
- * config against ledger totals. AI never produces a number or a legal
- * classification here (PRD §5.5, TRD §8).
+ * against ledger totals. AI never produces a number or a legal
+ * classification here.
+ *
+ *  - `types`    mirrors of the tax tables
+ *  - `periods`  assessment windows and due dates, timezone-free
+ *  - `engine`   computeObligations() and periodStatuses()
+ *  - `repo`     loads rules/profile/summary from Supabase
  */
-export const TAX_ENGINE_MODULE_STATUS = "not-started" as const;
+export * from "./types.js";
+export * from "./periods.js";
+export * from "./engine.js";
+export * from "./repo.js";

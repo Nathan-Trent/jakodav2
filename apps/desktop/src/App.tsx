@@ -12,6 +12,8 @@ import { PosScreen } from "@/screens/PosScreen";
 import { ItemsScreen } from "@/screens/ItemsScreen";
 import { DevicesScreen } from "@/screens/DevicesScreen";
 import { PurchasesScreen } from "@/screens/PurchasesScreen";
+import { ExpensesScreen } from "@/screens/ExpensesScreen";
+import { TaxScreen } from "@/screens/TaxScreen";
 import { ComingSoonScreen } from "@/screens/ComingSoonScreen";
 import { ConflictsScreen } from "@/screens/ConflictsScreen";
 import { GateBanner, LockedScreen } from "@/components/GateBanner";
@@ -54,6 +56,8 @@ function Router() {
   else if (current.key === "items") content = <ItemsScreen />;
   else if (current.key === "devices") content = <DevicesScreen />;
   else if (current.key === "purchases") content = <PurchasesScreen />;
+  else if (current.key === "expenses") content = <ExpensesScreen />;
+  else if (current.key === "tax") content = <TaxScreen />;
   else content = <DashboardScreen onNavigate={setPage} />;
 
   // SYNC: a locked terminal shows nothing but the way to unlock it.

@@ -303,9 +303,65 @@ it already downloaded. Fixed:
 - Purchases/expenses are not queued offline yet — only sales.
 
 ## Stage 6 — Tax engine foundation
-Status: NOT STARTED
+Status: BUILT (2026-09-12) — `0010_tax_engine.sql` NOT YET APPLIED.
 Config-driven rules table, category selection, live threshold widget;
 refunds/reliefs data model present but inactive.
+
+**The one decision that shapes this stage:** TRD §8.1 says the exact
+Nigerian figures need an accountant and the widget shouldn't face a real
+user until confirmed. That is baked into the data: every `tax_rules` row
+has `verified = false` in the seed; the engine propagates it; the UI labels
+every figure "Draft — not yet confirmed by an accountant" until a human
+flips the flag. Nothing to rebuild when the numbers are confirmed.
+
+**Built:**
+- `0010_tax_engine.sql` (**to run**): `tax_types` (vat, pit, cit, dev_levy),
+  `business_categories` + category→tax-type map (sole trader / registered
+  company), `shop_tax_profiles` (the owner's DECLARATION — never inferred,
+  TRD §8; includes voluntary VAT registration + TIN + fiscal year start),
+  `tax_rules` (effective-dated, versioned, `verified`, source cited) with
+  `tax_rules_history` (every change logged), `expenses` +
+  `expense_categories` (PRD §6.4; voided-never-edited), `tax_periods`
+  (self-reported filing with the FIRS reference; filed = locked, PRD §5.7),
+  `tax_period_amendments` (visible corrections), `tax_relief_inputs` (data
+  model only, calculation OFF per TRD §8), `shop_tax_summary()` (ledger
+  totals for a window: turnover, COGS, expenses by category, gross/net
+  profit — gated tax.view). Period lock: an expense dated into a filed
+  period is refused unless it's an amendment; backdating a sale online is
+  refused; a late OFFLINE sale into a filed period is accepted and raised
+  as a `locked_period` sync conflict.
+- DRAFT seed (all unverified, source noted per row): VAT 7.5% / ₦25M
+  threshold / 21st of following month; PIT bands from NTA 2025
+  (0% ≤₦800k … 25% >₦50M) / 31 March; CIT ₦50M small-company exemption /
+  30%; Dev levy 4%. §8.1 warns sources conflict on the thresholds.
+- `@zogal/tax-engine` (pure, 15 tests): `periods` (month/year windows with
+  fiscal-year start, due dates, period enumeration), `engine`
+  (`computeObligations` — threshold test on YEAR turnover, rate or
+  progressive bands on the basis, verified propagation, plain-language
+  notes; `periodStatuses` — outstanding vs filed with due/overdue),
+  `repo` (loaders + declare/file/expense/amendment writes).
+- Working set caches the tax slice (reference, profile, year+month ledger,
+  filings) and expenses, so the whole tax view computes OFFLINE; unsent
+  sales are folded into turnover/profit for the live figure.
+- Screens: **Tax** (declare category → per-tax status cards with threshold
+  bar, estimate, next due → outstanding-vs-filed list with "Mark filed"
+  dialog that stores the reference and a figures snapshot → reliefs
+  explained as recorded-not-applied), **Expenses** (record by category,
+  month totals, void with reason, amendment flow when the date is in a
+  filed period, terminal filter), **dashboard tax widget** (ambient, no
+  button — one line per tax with threshold progress or estimate + due date).
+- Read-only gating hides tax figures (TRD §7) via `financialsVisible`.
+
+**Not done / notes:**
+- Figures are DRAFT until an accountant verifies (`update tax_rules set
+  verified = true, verified_by = …`). The §8.1 settings page to do that
+  in-app is Stage 9.
+- Documents/exports "matching required filing formats" (PRD §6.7) — the
+  figures snapshot is stored with each filing; the export itself is Stage 8.
+- Input VAT (VAT paid on purchases) isn't tracked, so the VAT estimate is
+  output VAT only — said so in the UI.
+- `shop.timezone` is used server-side; the client uses the terminal's day
+  for "this month" — same result unless a terminal is set to a far timezone.
 
 ## Stage 7 — Notebook photo capture
 Status: NOT STARTED
@@ -363,6 +419,9 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   I'll rename them.
 - **2026-09-11** — Stage 5 built (see above). Next: apply 0008, generate the
   keypair, deploy the Edge Function, then test a real outage.
+- **2026-09-12** — Stage 6 built: tax engine (pure, 15 tests), 0010
+  migration with draft-flagged seed, Tax + Expenses screens, dashboard
+  widget. Handed to Nathan to apply. 64 tests green.
 - **2026-09-11** — Nathan's offline test: selling worked but nothing else
   reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
   per-user attribution on shared terminals (0009, approved). 43 tests.

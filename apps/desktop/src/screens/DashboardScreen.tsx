@@ -5,6 +5,7 @@ import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
 import { PageHeader } from "@/components/AppShell";
 import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
+import { TaxWidget } from "@/components/TaxWidget";
 import { useShopData } from "@/lib/shopData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
                   <StatusRow label="Low stock items" value={String(data?.stock.low_stock ?? 0)}
                     badge={(data?.stock.low_stock ?? 0) > 0 ? <Badge variant="warning"><IconAlertTriangle size={12} /> Restock</Badge> : <Badge variant="success">OK</Badge>}
                     onClick={() => onNavigate("items")} />
-                  <StatusRow label="Tax" value="Not set up" badge={<Badge variant="secondary">Stage 6</Badge>} />
+                  <TaxWidget onNavigate={onNavigate} />
                 </div>
               )}
             </CardContent>
