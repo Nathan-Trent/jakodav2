@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AuthRepository, type DeviceActivation, type Membership, type MyContext } from "@jakoda/auth-permissions";
-import { InventoryRepository } from "@jakoda/inventory-batches";
+import { AuthRepository, type DeviceActivation, type Membership, type MyContext } from "@zogal/auth-permissions";
+import { InventoryRepository } from "@zogal/inventory-batches";
 import { getSupabase } from "@/lib/supabase";
 import { clearDevice, loadDevice, saveDevice } from "@/lib/device";
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { IconRefresh } from "@tabler/icons-react";
-import type { DeviceStatusRow } from "@jakoda/auth-permissions";
+import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { PageHeader } from "@/components/AppShell";
 import { Alert } from "@/components/Alert";
 import { ConfirmDialog } from "@/components/ConfirmDialog";

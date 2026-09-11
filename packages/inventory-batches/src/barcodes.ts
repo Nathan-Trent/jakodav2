@@ -1,5 +1,5 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
-import type { BarcodeRow, ItemRow, NumericString } from "@jakoda/shared";
+import type { BarcodeRow, ItemRow, NumericString } from "@zogal/shared";
 import { z } from "zod";
 
 /**

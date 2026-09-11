@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconBarcode, IconPlus, IconTrash } from "@tabler/icons-react";
-import type { ItemRow, SaleRow } from "@jakoda/shared";
-import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@jakoda/shared";
+import type { ItemRow, SaleRow } from "@zogal/shared";
+import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@zogal/shared";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,11 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { useSession } from "@/lib/session";
+import { useSync } from "@/lib/sync";
 import { getSupabase } from "@/lib/supabase";
 import { notifyError, notifyInfo, notifySuccess } from "@/lib/feedback";
 import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
 import { Alert } from "@/components/Alert";
-import { announceStockChange, lookupBarcode, stockChannel } from "@jakoda/inventory-batches";
+import { announceStockChange, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
+import { enqueue } from "@zogal/sync";
 import { cn } from "@/lib/utils";
 
 interface CartLine {
@@ -31,6 +33,7 @@ interface CartLine {
  */
 export function PosScreen() {
   const { ctx, active, device, inventory } = useSession();
+  const { status: syncStatus, writable, syncNow } = useSync();
   const shop = active!.shop;
   const perms = active!.permissions;
   const can = (p: (typeof perms)[number]) => perms.includes(p);
@@ -127,26 +130,58 @@ export function PosScreen() {
     })
     .filter((x): x is string => !!x);
 
+  /**
+   * SYNC: the sale is committed locally first and acknowledged immediately —
+   * the goods have left the shop whether or not there is a network (PRD §6.9).
+   * Online we write straight through so stock is correct for other terminals;
+   * offline we queue and the engine replays it, idempotent on client_ref.
+   */
   async function checkout() {
-    if (!ctx?.user || cart.length === 0 || cartProblems.length) return;
+    if (!ctx?.user || cart.length === 0 || cartProblems.length || !writable) return;
     setBusy(true);
+    // Generated here so an online write and a queued replay can never
+    // produce two sales for the same basket.
+    const clientRef = crypto.randomUUID();
+    const soldAt = new Date().toISOString();
+    const lines = cart.map((l) => ({
+      item_id: l.item.id,
+      quantity: l.quantity,
+      unit_price: fromKobo(l.unitPrice),
+      // Snapshot so a floor changed while offline can't void a real sale.
+      floor_price_at_sale: fromKobo(toKobo(l.item.floor_price)),
+    }));
+
     try {
-      const sale = await inventory.recordSale({
-        shopId: shop.id,
-        // SYNC: client-generated so an offline replay can't double-record.
-        clientRef: crypto.randomUUID(),
-        soldBy: ctx.user.id,
-        deviceId: device?.device_id ?? null,
-        lines: cart.map((l) => ({
-          item_id: l.item.id,
-          quantity: l.quantity,
-          unit_price: fromKobo(l.unitPrice),
-        })),
-      });
-      setCart([]);
-      notifySuccess(`Sale recorded — ${formatNaira(toKobo(sale.total))}`, { description: `${sale.id.slice(0, 8)} · ${new Date(sale.sold_at).toLocaleTimeString()}` });
-      await load();
-      if (channelRef.current) void announceStockChange(channelRef.current, device?.device_id ?? null);
+      if (navigator.onLine) {
+        const sale = await inventory.recordSale({
+          shopId: shop.id, clientRef, soldBy: ctx.user.id,
+          deviceId: device?.device_id ?? null, soldAt,
+          lines: lines.map(({ item_id, quantity, unit_price }) => ({ item_id, quantity, unit_price })),
+        });
+        setCart([]);
+        notifySuccess(`Sale recorded — ${formatNaira(toKobo(sale.total))}`, {
+          description: `${new Date(sale.sold_at).toLocaleTimeString()}`,
+        });
+        await load();
+        if (channelRef.current) void announceStockChange(channelRef.current, device?.device_id ?? null);
+      } else {
+        await enqueue({
+          kind: "sale", clientRef, shopId: shop.id,
+          deviceId: device?.device_id ?? null, occurredAt: soldAt,
+          payload: { lines, note: null },
+        });
+        // Keep the till usable: decrement the local view so the next sale sees
+        // the right stock. The server is the arbiter when this replays.
+        setStock((m) => {
+          const next = new Map(m);
+          for (const l of cart) next.set(l.item.id, Math.max(0, (next.get(l.item.id) ?? 0) - l.quantity));
+          return next;
+        });
+        setCart([]);
+        notifySuccess(`Sale saved offline — ${formatNaira(total)}`, {
+          description: "It will upload automatically when the connection returns.",
+        });
+      }
     } catch (e) {
       notifyError(e);
     } finally {
@@ -162,6 +197,18 @@ export function PosScreen() {
       <div className="grid grid-cols-[minmax(0,1fr)_380px] min-h-0">
         {/* Items */}
         <section className="overflow-y-auto px-8 pb-8 grid gap-6 content-start">
+          {!writable && (
+            <Alert tone="warning" title="Selling is paused on this terminal">
+              You can still look up stock and past sales. Sync to start selling again.
+            </Alert>
+          )}
+          {writable && syncStatus && !syncStatus.online && (
+            <Alert tone="info" title="Working offline"
+              action={<Button size="sm" variant="outline" onClick={syncNow}>Retry</Button>}>
+              Sales are saved on this terminal and upload automatically when the connection returns.
+              {syncStatus.pendingCount > 0 && ` ${syncStatus.pendingCount} waiting.`}
+            </Alert>
+          )}
           {lastScan && (
             <Alert tone={lastScan.ok ? "success" : "warning"} title={lastScan.ok ? `Scanned: ${lastScan.name}` : "Barcode not recognised"}
               action={<button className="text-caption underline" onClick={() => setLastScan(null)}>Dismiss</button>}>
@@ -274,7 +321,7 @@ export function PosScreen() {
               <span className="text-subheading">Total</span>
               <span className="figure figure-lg">{formatNaira(total)}</span>
             </div>
-            <Button size="xl" className="w-full" disabled={busy || cart.length === 0 || cartProblems.length > 0 || !can("sales.create")} onClick={() => void checkout()}>
+            <Button size="xl" className="w-full" disabled={busy || cart.length === 0 || cartProblems.length > 0 || !can("sales.create") || !writable} onClick={() => void checkout()}>
               {busy ? "Recording…" : "Record sale"}
             </Button>
           </div>

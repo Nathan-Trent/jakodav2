@@ -1,11 +1,11 @@
 {
-  "name": "@jakoda/tax-engine",
+  "name": "@zogal/tax-engine",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "@jakoda/shared": "*"
+    "@zogal/shared": "*"
   }
 }

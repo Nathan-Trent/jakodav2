@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { BatchRow } from "@jakoda/shared";
-import { formatNaira, fromKobo, toKobo } from "@jakoda/shared";
+import type { BatchRow } from "@zogal/shared";
+import { formatNaira, fromKobo, toKobo } from "@zogal/shared";
 import { Alert } from "@/components/Alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

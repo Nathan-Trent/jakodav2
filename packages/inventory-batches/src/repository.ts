@@ -6,7 +6,7 @@ import type {
   PurchaseCostCorrectionRow,
   PurchaseRow,
   SaleRow,
-} from "@jakoda/shared";
+} from "@zogal/shared";
 import {
   CostCorrectionSchema,
   NewItemSchema,

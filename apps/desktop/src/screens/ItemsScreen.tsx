@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { IconBarcode, IconPlus, IconSearch } from "@tabler/icons-react";
-import type { BarcodeRow, ItemRow } from "@jakoda/shared";
-import { listBarcodes } from "@jakoda/inventory-batches";
-import { formatNaira, toKobo, type Kobo } from "@jakoda/shared";
+import type { BarcodeRow, ItemRow } from "@zogal/shared";
+import { listBarcodes } from "@zogal/inventory-batches";
+import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
 import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { ItemDialog } from "@/components/ItemDialog";

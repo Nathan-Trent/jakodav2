@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { fromKobo, toKobo } from "@jakoda/shared";
+import { fromKobo, toKobo } from "@zogal/shared";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

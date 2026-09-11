@@ -1,12 +1,12 @@
 {
-  "name": "@jakoda/auth-permissions",
+  "name": "@zogal/auth-permissions",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "@jakoda/shared": "*",
+    "@zogal/shared": "*",
     "@supabase/supabase-js": "^2.106.0",
     "zod": "^4.4.0"
   }

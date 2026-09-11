@@ -1,4 +1,4 @@
-import { createAnonClient } from "@jakoda/shared";
+import { createAnonClient } from "@zogal/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | undefined;

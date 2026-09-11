@@ -1,4 +1,4 @@
-# Jakoda (repo: jakodav2) — Project Instructions for Claude Code
+# Zogal ERP (repo: jakodav2) — Project Instructions for Claude Code
 
 ## Before doing anything
 Read `/docs/PRD.md` and `/docs/TRD.md` in full. Read `/BUILD_LOG.md` to see

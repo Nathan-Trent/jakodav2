@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/AppShell";
 import { SessionProvider, useSession } from "@/lib/session";
+import { SyncProvider, useSync } from "@/lib/sync";
 import { NAV, visibleNav, type PageKey } from "@/lib/nav";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
@@ -11,12 +12,17 @@ import { ItemsScreen } from "@/screens/ItemsScreen";
 import { DevicesScreen } from "@/screens/DevicesScreen";
 import { PurchasesScreen } from "@/screens/PurchasesScreen";
 import { ComingSoonScreen } from "@/screens/ComingSoonScreen";
+import { ConflictsScreen } from "@/screens/ConflictsScreen";
+import { GateBanner, LockedScreen } from "@/components/GateBanner";
+import { LoadingMark } from "@/components/brand/LoadingMark";
 
 export function App() {
   return (
     <SessionProvider>
-      <Router />
-      <Toaster position="top-center" richColors />
+      <SyncProvider>
+        <Router />
+        <Toaster position="top-center" richColors />
+      </SyncProvider>
     </SessionProvider>
   );
 }
@@ -24,10 +30,11 @@ export function App() {
 /** Screen selection is pure state — no router lib needed for a POS. */
 function Router() {
   const { status, active, device } = useSession();
+  const { gate } = useSync();
   const [page, setPage] = useState<PageKey>("dashboard");
 
   if (status === "loading") {
-    return <div className="min-h-full flex items-center justify-center text-small text-muted-foreground">Loading…</div>;
+    return <LoadingMark label="Starting up…" />;
   }
   if (status === "signed-out") return <LoginScreen />;
   // Need a shop membership AND (for now) a bound terminal before selling.
@@ -39,15 +46,17 @@ function Router() {
 
   let content: React.ReactNode;
   if (current.comingIn) content = <ComingSoonScreen item={current} />;
+  else if (current.key === "conflicts") content = <ConflictsScreen />;
   else if (current.key === "sell") content = <PosScreen />;
   else if (current.key === "items") content = <ItemsScreen />;
   else if (current.key === "devices") content = <DevicesScreen />;
   else if (current.key === "purchases") content = <PurchasesScreen />;
   else content = <DashboardScreen onNavigate={setPage} />;
 
+  // SYNC: a locked terminal shows nothing but the way to unlock it.
   return (
     <AppShell page={current.key} onNavigate={setPage}>
-      {content}
+      {gate?.level === "locked" ? <LockedScreen /> : <><GateBanner />{content}</>}
     </AppShell>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Kobo } from "@jakoda/shared";
+import type { Kobo } from "@zogal/shared";
 import { allocateFifo, applyAllocation, cogs, InsufficientStockError } from "./fifo.js";
 
 const k = (n: number) => n as Kobo;

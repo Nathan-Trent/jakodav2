@@ -1,8 +1,9 @@
-import type { Permission } from "@jakoda/auth-permissions";
+import type { Permission } from "@zogal/auth-permissions";
 import {
   IconBox,
   IconCash,
   IconChartBar,
+  IconAlertTriangle,
   IconDeviceDesktop,
   IconLayoutDashboard,
   IconReceipt,
@@ -16,7 +17,7 @@ import {
 
 export type PageKey =
   | "dashboard" | "sell" | "items" | "purchases" | "expenses"
-  | "staff" | "devices" | "reports" | "tax" | "settings";
+  | "staff" | "devices" | "reports" | "tax" | "settings" | "conflicts";
 
 export interface NavItem {
   key: PageKey;
@@ -43,6 +44,7 @@ export const NAV: NavItem[] = [
   { key: "staff", label: "Staff", icon: IconUsers, anyOf: ["users.manage"],
     comingIn: { stage: 8, what: "Invite staff, roles, per-person permissions, manager PINs" } },
   { key: "devices", label: "Terminals", icon: IconDeviceDesktop, anyOf: ["shop.settings"] },
+  { key: "conflicts", label: "Sync issues", icon: IconAlertTriangle, anyOf: ["reports.view"] },
   { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"],
     comingIn: { stage: 8, what: "Sales, profit, stock and staff performance over any period" } },
   { key: "tax", label: "Tax", icon: IconReceiptTax, anyOf: ["tax.view"],

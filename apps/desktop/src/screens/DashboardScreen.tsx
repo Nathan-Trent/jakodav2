@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { IconAlertTriangle, IconArrowRight, IconRefresh } from "@tabler/icons-react";
-import { fetchRecentSales, fetchShopDashboard, type RecentSale, type ShopDashboard } from "@jakoda/inventory-batches";
-import { formatNaira, toKobo, type Kobo } from "@jakoda/shared";
+import { fetchRecentSales, fetchShopDashboard, type RecentSale, type ShopDashboard } from "@zogal/inventory-batches";
+import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
 import { PageHeader } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

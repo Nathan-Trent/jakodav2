@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Jakoda",
+  "productName": "Zogal ERP",
   "version": "0.1.0",
-  "identifier": "app.jakoda.desktop",
+  "identifier": "app.zogal.erp",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Jakoda",
+        "title": "Zogal ERP",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,

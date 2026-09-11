@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { NumericString } from "@jakoda/shared";
+import type { NumericString } from "@zogal/shared";
 
 /** Shape of shop_dashboard() — see 0005_dashboard.sql. */
 export interface ShopDashboard {

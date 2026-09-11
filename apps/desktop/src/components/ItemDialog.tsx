@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { IconBarcode, IconPrinter, IconSparkles, IconTrash } from "@tabler/icons-react";
-import type { BarcodeRow, ItemRow } from "@jakoda/shared";
-import { formatNaira, fromKobo, toKobo } from "@jakoda/shared";
-import { addManufacturerBarcode, generateBarcode, isValidEan13, removeBarcode, setItemPrices } from "@jakoda/inventory-batches";
+import type { BarcodeRow, ItemRow } from "@zogal/shared";
+import { formatNaira, fromKobo, toKobo } from "@zogal/shared";
+import { addManufacturerBarcode, generateBarcode, isValidEan13, removeBarcode, setItemPrices } from "@zogal/inventory-batches";
 import { Alert } from "@/components/Alert";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";

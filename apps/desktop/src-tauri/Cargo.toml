@@ -1,11 +1,11 @@
 [package]
-name = "jakoda-desktop"
+name = "zogal-erp-desktop"
 version = "0.1.0"
-description = "Jakoda desktop POS client"
+description = "Zogal ERP desktop POS client"
 edition = "2021"
 
 [lib]
-name = "jakoda_desktop_lib"
+name = "zogal_erp_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

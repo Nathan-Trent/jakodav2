@@ -46,7 +46,7 @@ allocation. `record_sale()` not yet exercised — it requires a real
 **Not done in Stage 1:**
 - Rust toolchain not installed on dev machine —
   `src-tauri` written but uncompiled. Icons not generated
-  (`npm run tauri -w @jakoda/desktop -- icon <png>`).
+  (`npm run tauri -w @zogal/desktop -- icon <png>`).
 - No `expenses`, `tax_rules`, `tax_periods`, `manager_pins` tables yet —
   they belong to Stages 2/6 and were deliberately left out.
 - `sales.void` permission exists but no void function/path yet (Stage 3).
@@ -89,7 +89,7 @@ creation; weekly rotating manager PIN.
     owner and bypassed RLS — cross-tenant + cost leak). `device_status` same.
   - Column-level grants: `users` (name/phone only), `devices`
     (credential_hash never readable), `shop_invitations` (revoke only).
-- TS `@jakoda/auth-permissions`: `AuthRepository` covering all of the above
+- TS `@zogal/auth-permissions`: `AuthRepository` covering all of the above
   + typed `MyContext`, device/invitation/override row types.
 
 **Not done / notes:**
@@ -140,10 +140,10 @@ after trying an emerald-teal variant and a zinc/gold + cut-corner direction
 Not in the TRD sequence as a stage; Nathan asked for the product to read as
 a system (navigation, owner overview, role-aware views, honest "coming
 soon" sections) before barcodes, and for Zogal's design system to be used
-as Jakoda's (different brand, same system).
+as Zogal ERP's (different brand, same system).
 
 **Built (2026-09-11):**
-- Product renamed **Jakoda** (was "JakoDav"); npm scope `@jakoda/*`.
+- Product renamed **Zogal ERP** (was "JakoDav"); npm scope `@zogal/*`.
 - Design system from `zogal.app/docs/design_system.md`: Manrope, green
   hierarchy (Forest/Deep/Action/Signal/Mint), solid cards + elevation (no
   blur), 16px cards / 10px buttons / pill badges, tabular-num money at 800,
@@ -218,11 +218,52 @@ checking, label printing.
   already sold keep their recorded cost; calls `correct_batch_cost()`.
 
 ## Stage 5 — Offline-first & sync
-Status: NOT STARTED
-Includes offline subscription enforcement (monotonic clock, signed token,
-grace period, progressive gating).
-Hooks already in place: `sales.client_ref` idempotency key; TS
-`allocateFifo()` mirrors SQL for local allocation.
+Status: IN PROGRESS — built; `0008_sync_subscriptions.sql` NOT YET APPLIED,
+Edge Function NOT YET DEPLOYED.
+
+**Built (2026-09-11):**
+- `0008_sync_subscriptions.sql` (**to run**): `operational_settings`
+  (singleton + history, TRD §5.1 defaults), `subscriptions` (per shop, auto
+  on shop create, open-ended until Stage 8 billing), `sync_conflicts`,
+  `clock_anomalies`; `consume_batches_fifo_partial()` (shortfall-tolerant),
+  `replay_offline_sale()` (idempotent on client_ref, keeps original sold_at,
+  honours the floor as it stood at sale time, raises conflicts),
+  `device_heartbeat` v2 (returns subscription + policy, logs clock
+  divergence), `store_subscription_token()`.
+  *Flagged:* `subscriptions` and `sync_conflicts` are not in the TRD §4
+  entity list — required by §7, called out rather than added quietly.
+- Edge Function `issue-subscription-token` + `keygen.ts` (**to deploy**):
+  Ed25519 signing with the private key in Supabase secrets; the app ships
+  only the public key, so it can verify but never forge or extend a token.
+- `@zogal/sync`: `queue` (IndexedDB outbox, durable, ordered, idempotent),
+  `clock` (monotonic accumulator + wall ratchet — see below), `token`
+  (Ed25519 verify; every failure means *less* access), `gating`
+  (grace → read-only → locked from BOTH expiry and sync cadence, stricter
+  wins), `engine`, `conflicts`. 21 unit tests.
+- Desktop: `SyncProvider` + `useSync`; `SyncBadge` in the sidebar (online,
+  unsent count, gate state); `GateBanner` + full-screen `LockedScreen`;
+  offline checkout enqueues and decrements local stock; Sync-issues screen
+  for owners to review and annotate conflicts.
+
+**Design notes worth keeping:**
+- Clock: an early version kept an absolute wall-clock high-water mark. Tests
+  caught that ONE bad clock reading (set to 2099) would poison it and lock a
+  terminal forever. Now the ratchet is anchored to the last sync and reset by
+  it; in-session forward jumps beyond the measured delta are flagged, not
+  trusted, while the startup gap (app closed) is accepted.
+- IndexedDB over SQLite for the outbox: durable and transactional with no
+  Rust plugin. Trade-off: readable from devtools, so the device credential
+  should still move to native storage before shipping.
+- Stock refresh uses a broadcast channel, not postgres_changes, because RLS
+  hides other terminals' sales from a salesperson.
+
+**Not done:**
+- 0008 not applied; Edge Function not deployed; no keypair generated yet, so
+  gating is inert (no public key → gating off, deliberately fail-open so a
+  missing key can't lock a real shop out).
+- Offline path not yet exercised end to end against a real outage.
+- Device credential still in localStorage.
+- Purchases/expenses are not queued offline yet — only sales.
 
 ## Stage 6 — Tax engine foundation
 Status: NOT STARTED
@@ -272,14 +313,27 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   SECURITY DEFINER SQL (no server). Found + fixed an RLS bypass in 0001's
   `item_stock` view. `tsc -b` / eslint / 8 tests green. Migration handed to
   Nathan; not applied. Next: apply 0002, smoke-test with a real signup.
+- **2026-09-11** — Renamed the product to **Zogal ERP** (Nathan: same brand
+  family as zogal.app, which is also fintech). `@zogal/*` scope,
+  `app.zogal.erp`, `zogal-erp-desktop`. Brand assets COPIED into
+  `apps/desktop/public/brand` so this repo is independent of zogal.app: the
+  ribbon-Z mark, and the six landing-page leaves — which were 1–1.8 MB raster
+  images inside SVG wrappers, extracted and downscaled to 13–20 KB PNGs
+  (93 KB for the set instead of 9 MB). Leaves drift on signed-out screens
+  only; the breathing mark is the one loading state. localStorage keys
+  migrate from the old names so activated terminals stay bound.
+  Repo folder and GitHub remote are still `jakodav2` — say the word and
+  I'll rename them.
+- **2026-09-11** — Stage 5 built (see above). Next: apply 0008, generate the
+  keypair, deploy the Edge Function, then test a real outage.
 - **2026-09-11** — Stage 4 built: barcodes (EAN-13 generation, scanner hook,
   labels), Purchases screen with cost-change price prompt, live stock via
   broadcast, collapsible sidebar, UX layer (errors/feedback/Alert/Confirm).
   `0006_barcodes.sql` applied. Simulated-scanner verification passed.
   Fixed toast background (sonner vars need `hsl()` around HSL triplets).
-  Tauri binary rebuilt as `jakoda-desktop.exe`. Next: cost-correction UI,
+  Tauri binary rebuilt as `zogal-erp-desktop.exe`. Next: cost-correction UI,
   then Stage 5 (offline-first & sync).
-- **2026-09-11** — Stage 3b: rename to Jakoda; Zogal design system applied;
+- **2026-09-11** — Stage 3b: rename to Zogal ERP; Zogal design system applied;
   app shell + dashboard + items + terminals pages; `0005_dashboard.sql`
   handed to Nathan. Verified in browser. Dev note: Tabler icons is ~12k
   files — never run two npm installs concurrently (corrupted once, Vite

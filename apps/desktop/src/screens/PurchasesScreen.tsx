@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconBarcode, IconPencil, IconTrash, IconTruckDelivery } from "@tabler/icons-react";
-import type { BatchRow, ItemRow } from "@jakoda/shared";
-import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@jakoda/shared";
-import { announceStockChange, lookupBarcode, setItemPrices, stockChannel } from "@jakoda/inventory-batches";
+import type { BatchRow, ItemRow } from "@zogal/shared";
+import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@zogal/shared";
+import { announceStockChange, lookupBarcode, setItemPrices, stockChannel } from "@zogal/inventory-batches";
 import { PageHeader } from "@/components/AppShell";
 import { CostCorrectionDialog } from "@/components/CostCorrectionDialog";
 import { Alert } from "@/components/Alert";

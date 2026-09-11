@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    jakoda_desktop_lib::run()
+    zogal_erp_lib::run()
 }

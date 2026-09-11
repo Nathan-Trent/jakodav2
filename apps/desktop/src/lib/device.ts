@@ -1,4 +1,4 @@
-import type { DeviceActivation } from "@jakoda/auth-permissions";
+import type { DeviceActivation } from "@zogal/auth-permissions";
 
 /**
  * Persisted device binding (TRD §1 activation flow). The credential is
@@ -9,11 +9,21 @@ import type { DeviceActivation } from "@jakoda/auth-permissions";
  * Stage 5 TODO: move to tauri-plugin-store / OS keychain so it isn't readable
  * from devtools, and so the SYNC layer can read it from the native side.
  */
-const KEY = "jakoda.device";
+const KEY = "zogal.device";
+/** Pre-rename key. Read once so the Jakoda→Zogal rename doesn't un-bind a live terminal. */
+const LEGACY_KEY = "jakoda.device";
 
 export function loadDevice(): DeviceActivation | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    let raw = localStorage.getItem(KEY);
+    if (!raw) {
+      const legacy = localStorage.getItem(LEGACY_KEY);
+      if (legacy) {
+        localStorage.setItem(KEY, legacy);
+        localStorage.removeItem(LEGACY_KEY);
+        raw = legacy;
+      }
+    }
     if (!raw) return null;
     const v = JSON.parse(raw) as Partial<DeviceActivation>;
     if (v.device_id && v.shop_id && v.credential) return v as DeviceActivation;

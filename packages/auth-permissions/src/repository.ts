@@ -1,5 +1,5 @@
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import type { RoleRow, ShopMemberRow, ShopRow } from "@jakoda/shared";
+import type { RoleRow, ShopMemberRow, ShopRow } from "@zogal/shared";
 import { z } from "zod";
 import { isPermission, type Permission } from "./permissions.js";
 import type {

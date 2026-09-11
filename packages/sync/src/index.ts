@@ -1,10 +1,25 @@
 /**
- * SYNC module — Stage 5. Not started.
+ * SYNC module — Stage 5 (TRD §7).
  *
- * Boundary reserved now so nothing else grows into it. Will own:
- *  - local write-ahead queue (offline-first, instant local writes)
- *  - background replay on reconnect (idempotent via sales.client_ref)
- *  - conflict surfacing (never silent resolution) for offline double-sells
- *  - mandatory sync cadence enforcement (2–3 days, escalating to ~1 week)
+ * Owns everything about a terminal running without a network:
+ *  - `queue`    local write-ahead outbox; instant local writes, durable
+ *  - `clock`    elapsed time the app can defend against a tampered clock
+ *  - `token`    Ed25519 verification of the signed subscription token
+ *  - `gating`   grace → read-only → locked, from both expiry and sync cadence
+ *  - `engine`   ties them together and publishes one SyncStatus to the UI
+ *
+ * Conflicts are surfaced, never resolved here: the server records what really
+ * happened and raises a sync_conflict for the owner (PRD §5.4).
  */
-export const SYNC_MODULE_STATUS = "not-started" as const;
+export {
+  enqueue, pending, pendingCount, prune, oldestPendingAt,
+  markFailed,
+  // queue and clock both have a markSynced; the queue's is per-entry.
+  markSynced as markEntrySynced,
+  type OutboxEntry, type OutboxKind,
+} from "./queue.js";
+export * from "./clock.js";
+export * from "./token.js";
+export * from "./gating.js";
+export * from "./engine.js";
+export * from "./conflicts.js";

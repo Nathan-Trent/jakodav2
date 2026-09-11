@@ -3,7 +3,7 @@
 @import "@fontsource-variable/manrope";
 
 /* ============================================================
-   Jakoda design system — Zogal's system applied to a different brand.
+   Zogal ERP design system — Zogal's system applied to a different brand.
    Source of truth for the rules: zogal.app/docs/design_system.md.
 
    Palette: the green hierarchy, used by job, never by taste:
@@ -173,4 +173,27 @@
   /* Card press: physical, 0.18s, no blur */
   .pressable { transition: transform 0.18s ease, box-shadow 0.18s ease; }
   .pressable:active { transform: translateY(1px) scale(0.982); box-shadow: var(--shadow-elev-1); }
+}
+
+/* ============================================================
+   Brand motion — the breathing mark and the drifting leaves.
+   Transform + opacity only, so both stay on the compositor.
+   ============================================================ */
+@keyframes zogal-breathe {
+  0%, 100% { opacity: 0.7; transform: rotate(0deg) scale(0.96); }
+  33%      { opacity: 1;   transform: rotate(12deg) scale(1.04); }
+  66%      { opacity: 0.75; transform: rotate(-8deg) scale(0.98); }
+}
+
+@keyframes zogal-leaf-fall {
+  0%   { transform: translate3d(0, -12vh, 0) rotate(0deg); }
+  100% { transform: translate3d(var(--leaf-drift, 0px), 112vh, 0) rotate(var(--leaf-spin, 180deg)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The mark holds still and the leaves stop falling; nothing is lost but the
+     movement, and motion sensitivity is not a preference to override. */
+  .animate-\[zogal-breathe_2\.4s_ease-in-out_infinite\],
+  .animate-\[zogal-leaf-fall_linear_infinite\] { animation: none !important; }
+  .animate-\[zogal-leaf-fall_linear_infinite\] { opacity: 0.12 !important; transform: translate3d(0, 40vh, 0); }
 }
