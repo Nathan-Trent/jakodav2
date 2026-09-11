@@ -6,7 +6,7 @@ import { announceStockChange, setItemPrices, stockChannel } from "@zogal/invento
 import { Alert } from "@/components/Alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Label } from "@/components/ui/label";
 import { notifyError, notifySuccess } from "@/lib/feedback";
 import { useSession } from "@/lib/session";
@@ -141,12 +141,12 @@ export function AddStockDialog({ item, onClose, onDone }: { item: ItemRow | null
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label htmlFor="as-qty">Quantity received</Label>
-                <Input id="as-qty" type="number" min={1} step={1} value={qty} onChange={(e) => setQty(e.target.value)} autoFocus required />
+                <NumberField id="as-qty" decimals={0} min={1} value={qty} onChange={setQty} autoFocus required />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="as-cost">Cost per unit (₦)</Label>
-                <Input id="as-cost" type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)}
-                  className={cn(costChanged && "border-status-amber")} required />
+                <NumberField id="as-cost" prefix="₦" decimals={2} value={cost} onChange={setCost}
+                  className={cn(costChanged && "[&_input]:border-status-amber")} required />
               </div>
             </div>
 
@@ -175,11 +175,11 @@ export function AddStockDialog({ item, onClose, onDone }: { item: ItemRow | null
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label htmlFor="as-floor">Floor (₦)</Label>
-                <Input id="as-floor" type="number" min={0} step="0.01" value={floor} onChange={(e) => setFloor(e.target.value)} />
+                <NumberField id="as-floor" prefix="₦" decimals={2} value={floor} onChange={setFloor} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="as-sugg">Suggested (₦)</Label>
-                <Input id="as-sugg" type="number" min={0} step="0.01" value={suggested} onChange={(e) => setSuggested(e.target.value)} />
+                <NumberField id="as-sugg" prefix="₦" decimals={2} value={suggested} onChange={setSuggested} />
               </div>
             </div>
             <p className={cn("text-caption", (toKobo(suggested || "0") - priceStep.newCost) < 0 ? "text-status-red" : "text-muted-foreground")}>

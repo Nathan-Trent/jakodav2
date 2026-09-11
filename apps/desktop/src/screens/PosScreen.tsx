@@ -10,7 +10,7 @@ import { Alert } from "@/components/Alert";
 import { StaleNotice } from "@/components/StaleNotice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { notifyError, notifyInfo, notifySuccess } from "@/lib/feedback";
@@ -23,9 +23,18 @@ import { cn } from "@/lib/utils";
 
 interface CartLine {
   item: ItemRow;
-  quantity: number;
+  /** Kept as typed so the box can be empty mid-edit; parsed where used. */
+  qtyText: string;
   /** Actual sale price as typed — may exceed suggested, never below floor. */
-  unitPrice: Kobo;
+  priceText: string;
+}
+
+/** Parse a line; null where the user hasn't given a usable number yet. */
+function lineNumbers(l: CartLine): { quantity: number | null; unitPrice: Kobo | null } {
+  const q = l.qtyText === "" ? null : Math.floor(Number(l.qtyText));
+  let p: Kobo | null = null;
+  try { p = l.priceText === "" ? null : toKobo(l.priceText); } catch { p = null; }
+  return { quantity: q !== null && q > 0 ? q : null, unitPrice: p };
 }
 
 /**
@@ -50,12 +59,12 @@ export function PosScreen() {
   function addToCart(item: ItemRow) {
     setCart((c) => {
       const existing = c.find((l) => l.item.id === item.id);
-      if (existing) return c.map((l) => (l === existing ? { ...l, quantity: l.quantity + 1 } : l));
-      return [...c, { item, quantity: 1, unitPrice: toKobo(item.suggested_price) }];
+      if (existing) return c.map((l) => (l === existing ? { ...l, qtyText: String((lineNumbers(l).quantity ?? 0) + 1) } : l));
+      return [...c, { item, qtyText: "1", priceText: fromKobo(toKobo(item.suggested_price)) }];
     });
   }
 
-  function updateLine(id: string, patch: Partial<Pick<CartLine, "quantity" | "unitPrice">>) {
+  function updateLine(id: string, patch: Partial<Pick<CartLine, "qtyText" | "priceText">>) {
     setCart((c) => c.map((l) => (l.item.id === id ? { ...l, ...patch } : l)));
   }
 
@@ -85,14 +94,20 @@ export function PosScreen() {
     setLastScan({ code: trimmed, ok: true, name: item.name });
   }, { enabled: !showAdd });
 
-  const total = useMemo(() => addKobo(...cart.map((l) => mulKobo(l.unitPrice, l.quantity))), [cart]);
+  const total = useMemo(
+    () => addKobo(...cart.map((l) => { const n = lineNumbers(l); return n.quantity && n.unitPrice !== null ? mulKobo(n.unitPrice, n.quantity) : (0 as Kobo); })),
+    [cart],
+  );
 
   const cartProblems = cart
     .map((l) => {
+      const { quantity, unitPrice } = lineNumbers(l);
+      if (quantity === null) return `${l.item.name}: enter a quantity`;
+      if (unitPrice === null) return `${l.item.name}: enter a price`;
       const floor = toKobo(l.item.floor_price);
-      if (l.unitPrice < floor) return `${l.item.name}: below floor ${formatNaira(floor)}`;
+      if (unitPrice < floor) return `${l.item.name}: below floor ${formatNaira(floor)}`;
       const onHand = stockFor(l.item.id);
-      if (l.quantity > onHand) return `${l.item.name}: only ${onHand} in stock`;
+      if (quantity > onHand) return `${l.item.name}: only ${onHand} in stock`;
       return null;
     })
     .filter((x): x is string => !!x);
@@ -108,13 +123,16 @@ export function PosScreen() {
     setBusy(true);
     const clientRef = crypto.randomUUID();
     const soldAt = new Date().toISOString();
-    const lines = cart.map((l) => ({
-      item_id: l.item.id,
-      quantity: l.quantity,
-      unit_price: fromKobo(l.unitPrice),
-      // Snapshot so a floor changed while offline can't void a real sale.
-      floor_price_at_sale: fromKobo(toKobo(l.item.floor_price)),
-    }));
+    const lines = cart.map((l) => {
+      const n = lineNumbers(l);
+      return {
+        item_id: l.item.id,
+        quantity: n.quantity!,          // cartProblems guarantees these
+        unit_price: fromKobo(n.unitPrice!),
+        // Snapshot so a floor changed while offline can't void a real sale.
+        floor_price_at_sale: fromKobo(toKobo(l.item.floor_price)),
+      };
+    });
 
     try {
       if (navigator.onLine) {
@@ -255,7 +273,8 @@ export function PosScreen() {
           )}
           {cart.map((l) => {
             const floor = toKobo(l.item.floor_price);
-            const below = l.unitPrice < floor;
+            const { unitPrice } = lineNumbers(l);
+            const below = unitPrice !== null && unitPrice < floor;
             return (
               <div key={l.item.id} className="rounded-[10px] border p-3 grid gap-2">
                 <div className="flex justify-between gap-2">
@@ -267,14 +286,12 @@ export function PosScreen() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="grid gap-1">
                     <Label className="text-caption text-muted-foreground">Qty</Label>
-                    <Input type="number" min={1} value={l.quantity}
-                      onChange={(e) => updateLine(l.item.id, { quantity: Math.max(1, Number(e.target.value) || 1) })} />
+                    <NumberField decimals={0} min={1} value={l.qtyText} onChange={(v) => updateLine(l.item.id, { qtyText: v })} />
                   </div>
                   <div className="grid gap-1">
-                    <Label className="text-caption text-muted-foreground">Price (₦)</Label>
-                    <Input type="number" min={0} step="0.01" className={cn(below && "border-destructive")}
-                      value={fromKobo(l.unitPrice)}
-                      onChange={(e) => { try { updateLine(l.item.id, { unitPrice: toKobo(e.target.value || "0") }); } catch { /* partial input */ } }} />
+                    <Label className="text-caption text-muted-foreground">Price</Label>
+                    <NumberField prefix="₦" decimals={2} value={l.priceText} aria-invalid={below}
+                      onChange={(v) => updateLine(l.item.id, { priceText: v })} />
                   </div>
                 </div>
                 {below && <p className="text-xs text-destructive">Below floor price {formatNaira(floor)}</p>}

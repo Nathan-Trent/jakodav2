@@ -3,6 +3,7 @@ import { fromKobo, toKobo } from "@zogal/shared";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Label } from "@/components/ui/label";
 import { useSession } from "@/lib/session";
 import { notifyError } from "@/lib/feedback";
@@ -62,22 +63,22 @@ export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; o
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label htmlFor="item-floor">Floor price (₦)</Label>
-              <Input id="item-floor" type="number" min={0} step="0.01" value={floor} onChange={(e) => setFloor(e.target.value)} required />
+              <NumberField id="item-floor" prefix="₦" decimals={2} value={floor} onChange={setFloor} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="item-suggested">Suggested price (₦)</Label>
-              <Input id="item-suggested" type="number" min={0} step="0.01" value={suggested} onChange={(e) => setSuggested(e.target.value)} required />
+              <NumberField id="item-suggested" prefix="₦" decimals={2} value={suggested} onChange={setSuggested} required />
             </div>
           </div>
           {canPurchase && (
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label htmlFor="item-qty">Initial quantity</Label>
-                <Input id="item-qty" type="number" min={0} step={1} value={qty} onChange={(e) => setQty(e.target.value)} />
+                <NumberField id="item-qty" decimals={0} value={qty} onChange={setQty} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="item-cost">Cost per unit (₦)</Label>
-                <Input id="item-cost" type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
+                <NumberField id="item-cost" prefix="₦" decimals={2} value={cost} onChange={setCost} />
               </div>
             </div>
           )}

@@ -5,6 +5,7 @@ import { Alert } from "@/components/Alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Label } from "@/components/ui/label";
 import { notifyError, notifySuccess } from "@/lib/feedback";
 import { useSession } from "@/lib/session";
@@ -60,7 +61,7 @@ export function CostCorrectionDialog({ batch, itemName, onClose, onDone }: { bat
           )}
           <div className="grid gap-2">
             <Label htmlFor="cc-cost">Correct cost per unit (₦)</Label>
-            <Input id="cc-cost" type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} autoFocus />
+            <NumberField id="cc-cost" prefix="₦" decimals={2} value={cost} onChange={setCost} autoFocus />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="cc-reason">Reason <span className="text-muted-foreground font-normal">(required, kept forever)</span></Label>

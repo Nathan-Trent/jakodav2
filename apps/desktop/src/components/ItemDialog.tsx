@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { notifyError, notifySuccess } from "@/lib/feedback";
@@ -143,7 +144,7 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
               <div className="flex items-end gap-2 pt-1">
                 <div className="grid gap-1">
                   <Label className="text-caption text-muted-foreground">Copies</Label>
-                  <Input type="number" min={1} max={500} className="w-20" value={copies} onChange={(e) => setCopies(e.target.value)} />
+                  <NumberField decimals={0} min={1} className="w-20" value={copies} onChange={setCopies} />
                 </div>
                 <div className="grid gap-1">
                   <Label className="text-caption text-muted-foreground">Layout</Label>
@@ -171,12 +172,12 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="ed-floor">Floor price (₦)</Label>
-                    <Input id="ed-floor" type="number" min={0} step="0.01" value={floor} onChange={(e) => setFloor(e.target.value)} disabled={!canEditFloor} />
+                    <NumberField id="ed-floor" prefix="₦" decimals={2} value={floor} onChange={setFloor} disabled={!canEditFloor} />
                     {!canEditFloor && <p className="text-caption text-muted-foreground">Only owners can change the floor.</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="ed-suggested">Suggested price (₦)</Label>
-                    <Input id="ed-suggested" type="number" min={0} step="0.01" value={suggested} onChange={(e) => setSuggested(e.target.value)} />
+                    <NumberField id="ed-suggested" prefix="₦" decimals={2} value={suggested} onChange={setSuggested} />
                   </div>
                 </div>
                 <div className="grid gap-2">

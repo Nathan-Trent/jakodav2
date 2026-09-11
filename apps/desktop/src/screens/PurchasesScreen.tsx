@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/ui/number-field";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,10 +26,18 @@ import { cn } from "@/lib/utils";
 
 interface RestockLine {
   item: ItemRow;
-  quantity: number;
-  unitCost: Kobo;
+  /** Kept as typed so the boxes can be empty mid-edit; parsed where used. */
+  qtyText: string;
+  costText: string;
   /** Cost of the newest existing batch, for change detection (PRD §6.3). */
   lastCost: Kobo | null;
+}
+
+function lineNumbers(l: RestockLine): { quantity: number | null; unitCost: Kobo | null } {
+  const q = l.qtyText === "" ? null : Math.floor(Number(l.qtyText));
+  let c: Kobo | null = null;
+  try { c = l.costText === "" ? null : toKobo(l.costText); } catch { c = null; }
+  return { quantity: q !== null && q > 0 ? q : null, unitCost: c };
 }
 
 /**
@@ -68,10 +77,10 @@ export function PurchasesScreen() {
 
   function addLine(item: ItemRow) {
     setLines((ls) => {
-      if (ls.some((l) => l.item.id === item.id)) return ls.map((l) => (l.item.id === item.id ? { ...l, quantity: l.quantity + 1 } : l));
+      if (ls.some((l) => l.item.id === item.id)) return ls.map((l) => (l.item.id === item.id ? { ...l, qtyText: String((lineNumbers(l).quantity ?? 0) + 1) } : l));
       const last = latestBatch.get(item.id);
       const lastCost = last ? toKobo(last.unit_cost) : null;
-      return [...ls, { item, quantity: 1, unitCost: lastCost ?? (0 as Kobo), lastCost }];
+      return [...ls, { item, qtyText: "1", costText: lastCost !== null ? fromKobo(lastCost) : "", lastCost }];
     });
   }
 
@@ -87,8 +96,11 @@ export function PurchasesScreen() {
     addLine(item);
   }, { enabled: !priceReview });
 
-  const total = useMemo(() => addKobo(...lines.map((l) => mulKobo(l.unitCost, l.quantity))), [lines]);
-  const problems = lines.filter((l) => l.quantity < 1 || l.unitCost < 0);
+  const total = useMemo(
+    () => addKobo(...lines.map((l) => { const n = lineNumbers(l); return n.quantity && n.unitCost !== null ? mulKobo(n.unitCost, n.quantity) : (0 as Kobo); })),
+    [lines],
+  );
+  const problems = lines.filter((l) => { const n = lineNumbers(l); return n.quantity === null || n.unitCost === null; });
   const filtered = items.filter((i) => i.name.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 12);
 
   async function save() {
@@ -106,11 +118,11 @@ export function PurchasesScreen() {
         shopId: shop.id,
         deviceId: device?.device_id ?? null,
         supplierName: supplier.trim() || undefined,
-        lines: lines.map((l) => ({ itemId: l.item.id, quantity: l.quantity, unitCost: fromKobo(l.unitCost) })),
+        lines: lines.map((l) => { const n = lineNumbers(l); return { itemId: l.item.id, quantity: n.quantity!, unitCost: fromKobo(n.unitCost!) }; }),
       });
-      notifySuccess("Stock received", { description: `${lines.reduce((s, l) => s + l.quantity, 0)} units across ${lines.length} item(s) — each at its own batch cost.` });
+      notifySuccess("Stock received", { description: `${lines.reduce((s, l) => s + (lineNumbers(l).quantity ?? 0), 0)} units across ${lines.length} item(s) — each at its own batch cost.` });
       void announceStockChange(stockChannel(getSupabase(), shop.id), device?.device_id ?? null);
-      const changed = lines.filter((l) => l.lastCost !== null && l.lastCost !== l.unitCost);
+      const changed = lines.filter((l) => l.lastCost !== null && l.lastCost !== lineNumbers(l).unitCost);
       setLines([]);
       setSupplier("");
       await refresh();
@@ -202,7 +214,8 @@ export function PurchasesScreen() {
             </div>
             {lines.length === 0 && <p className="text-small text-muted-foreground">Scan or pick items to receive.</p>}
             {lines.map((l) => {
-              const changed = l.lastCost !== null && l.lastCost !== l.unitCost;
+              const { unitCost } = lineNumbers(l);
+              const changed = l.lastCost !== null && unitCost !== null && l.lastCost !== unitCost;
               return (
                 <div key={l.item.id} className="rounded-[10px] border p-3 grid gap-2">
                   <div className="flex items-center justify-between gap-2">
@@ -212,13 +225,12 @@ export function PurchasesScreen() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="grid gap-1">
                       <Label className="text-caption text-muted-foreground">Quantity</Label>
-                      <Input type="number" min={1} value={l.quantity} onChange={(e) => setLines((ls) => ls.map((x) => x === l ? { ...x, quantity: Math.max(1, Number(e.target.value) || 1) } : x))} />
+                      <NumberField decimals={0} min={1} value={l.qtyText} onChange={(v) => setLines((ls) => ls.map((x) => x === l ? { ...x, qtyText: v } : x))} />
                     </div>
                     <div className="grid gap-1">
-                      <Label className="text-caption text-muted-foreground">Cost per unit (₦)</Label>
-                      <Input type="number" min={0} step="0.01" value={fromKobo(l.unitCost)}
-                        className={cn(changed && "border-status-amber")}
-                        onChange={(e) => { try { setLines((ls) => ls.map((x) => x === l ? { ...x, unitCost: toKobo(e.target.value || "0") } : x)); } catch { /* partial input */ } }} />
+                      <Label className="text-caption text-muted-foreground">Cost per unit</Label>
+                      <NumberField prefix="₦" decimals={2} value={l.costText} className={cn(changed && "[&_input]:border-status-amber")}
+                        onChange={(v) => setLines((ls) => ls.map((x) => x === l ? { ...x, costText: v } : x))} />
                     </div>
                   </div>
                   {changed && <p className="text-caption text-status-amber">Cost changed from {formatNaira(l.lastCost!)}. A new batch will be created; you'll be asked about selling prices after saving.</p>}
@@ -263,8 +275,9 @@ function PriceReviewDialog({ lines, onClose, onDone }: { lines: RestockLine[] | 
       let n = 0;
       for (const l of lines!) {
         const d = drafts[l.item.id]!;
+        if (!d.floor || !d.suggested) continue; // left blank: keep as is
         if (d.floor === fromKobo(toKobo(l.item.floor_price)) && d.suggested === fromKobo(toKobo(l.item.suggested_price))) continue;
-        await setItemPrices(db, { itemId: l.item.id, floorPrice: fromKobo(toKobo(d.floor)), suggestedPrice: fromKobo(toKobo(d.suggested)), reason: `Cost changed ${formatNaira(l.lastCost!)} → ${formatNaira(l.unitCost)} on restock` });
+        await setItemPrices(db, { itemId: l.item.id, floorPrice: fromKobo(toKobo(d.floor)), suggestedPrice: fromKobo(toKobo(d.suggested)), reason: `Cost changed ${formatNaira(l.lastCost!)} → ${formatNaira(lineNumbers(l).unitCost!)} on restock` });
         n++;
       }
       notifySuccess(n ? `Selling prices updated for ${n} item(s)` : "Selling prices left unchanged", { description: "Applies to all stock, old and new. Cost prices untouched." });
@@ -285,21 +298,22 @@ function PriceReviewDialog({ lines, onClose, onDone }: { lines: RestockLine[] | 
         <div className="grid gap-3">
           {lines.map((l) => {
             const d = drafts[l.item.id] ?? { floor: "", suggested: "" };
-            const margin = toKobo(d.suggested || "0") - l.unitCost;
+            const newCost = lineNumbers(l).unitCost ?? (0 as Kobo);
+            const margin = toKobo(d.suggested || "0") - newCost;
             return (
               <div key={l.item.id} className="rounded-[10px] border p-3 grid gap-2">
                 <div className="flex justify-between items-baseline gap-2">
                   <span className="font-semibold">{l.item.name}</span>
-                  <span className="text-caption text-muted-foreground">cost {formatNaira(l.lastCost!)} → <b className="text-foreground">{formatNaira(l.unitCost)}</b></span>
+                  <span className="text-caption text-muted-foreground">cost {formatNaira(l.lastCost!)} → <b className="text-foreground">{formatNaira(newCost)}</b></span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="grid gap-1">
                     <Label className="text-caption text-muted-foreground">Floor (₦)</Label>
-                    <Input type="number" min={0} step="0.01" value={d.floor} onChange={(e) => setDrafts((x) => ({ ...x, [l.item.id]: { ...d, floor: e.target.value } }))} />
+                    <NumberField prefix="₦" decimals={2} value={d.floor} onChange={(v) => setDrafts((x) => ({ ...x, [l.item.id]: { ...d, floor: v } }))} />
                   </div>
                   <div className="grid gap-1">
                     <Label className="text-caption text-muted-foreground">Suggested (₦)</Label>
-                    <Input type="number" min={0} step="0.01" value={d.suggested} onChange={(e) => setDrafts((x) => ({ ...x, [l.item.id]: { ...d, suggested: e.target.value } }))} />
+                    <NumberField prefix="₦" decimals={2} value={d.suggested} onChange={(v) => setDrafts((x) => ({ ...x, [l.item.id]: { ...d, suggested: v } }))} />
                   </div>
                 </div>
                 <p className={cn("text-caption", margin < 0 ? "text-status-red" : "text-muted-foreground")}>
