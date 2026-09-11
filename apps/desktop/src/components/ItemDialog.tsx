@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { notifyError, notifySuccess } from "@/lib/feedback";
 import { printLabels, type LabelLayout } from "@/lib/labels";
 import { useSession } from "@/lib/session";
+import { useOnline } from "@/lib/useOnline";
 import { getSupabase } from "@/lib/supabase";
 
 /**
@@ -23,6 +24,7 @@ import { getSupabase } from "@/lib/supabase";
  */
 export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | null; onOpenChange: (o: boolean) => void; onChanged: () => Promise<void> }) {
   const { active } = useSession();
+  const online = useOnline();
   const perms = active!.permissions;
   const canEditItems = perms.includes("items.create");
   const canEditPrices = perms.includes("items.edit");
@@ -82,8 +84,10 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
             <div className="flex items-center justify-between">
               <h3 className="text-subheading flex items-center gap-2"><IconBarcode size={16} /> Barcodes</h3>
               {canEditItems && (
-                <Button size="sm" variant="outline" disabled={busy || hasCode}
-                  title={hasCode ? "This item already has a barcode — remove it first to generate a new one" : undefined}
+                <Button size="sm" variant="outline" disabled={busy || hasCode || !online}
+                  title={hasCode
+                    ? "This item already has a barcode — remove it first to generate a new one"
+                    : !online ? "Generating a barcode needs a connection (it must be unique across the shop). Scanning existing codes works offline." : undefined}
                   onClick={() => run(async () => {
                   const row = await generateBarcode(db, item.id);
                   notifySuccess("Barcode generated", { description: `${row.code} — print a label and stick it on the item.` });
@@ -117,7 +121,12 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
                 An item carries exactly one barcode, so labels never disagree. To change it, remove the current code first — then you can generate or attach another.
               </p>
             )}
-            {canEditItems && !hasCode && (
+            {canEditItems && !hasCode && !online && (
+              <p className="text-caption text-muted-foreground">
+                You're offline. Generating or attaching a barcode needs a connection so it can be checked for uniqueness — scanning existing codes still works.
+              </p>
+            )}
+            {canEditItems && !hasCode && online && (
               <form className="flex gap-2" onSubmit={(e: FormEvent) => { e.preventDefault(); void run(async () => {
                 await addManufacturerBarcode(db, shop.id, item.id, manual);
                 notifySuccess("Barcode attached");

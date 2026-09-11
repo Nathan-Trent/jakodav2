@@ -99,6 +99,7 @@ export interface PriceChangeRow {
 export interface PurchaseRow {
   id: UUID;
   shop_id: UUID;
+  device_id: UUID | null;
   supplier_name: string | null;
   note: string | null;
   purchased_at: ISOTimestamp;

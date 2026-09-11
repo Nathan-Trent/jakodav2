@@ -33,6 +33,12 @@ export interface OutboxEntry<T = unknown> {
   clientRef: string;
   shopId: string;
   deviceId: string | null;
+  /**
+   * Who was signed in when this happened. A shared terminal changes hands
+   * between shifts; whoever is signed in at SYNC time is not necessarily who
+   * made the sale, so the entry carries its own seller.
+   */
+  userId: string;
   /** When it actually happened, not when it syncs. */
   occurredAt: string;
   payload: T;

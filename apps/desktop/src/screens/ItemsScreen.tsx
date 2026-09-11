@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { IconBarcode, IconPlus, IconSearch } from "@tabler/icons-react";
+import { IconBarcode, IconPackageImport, IconPlus, IconSearch } from "@tabler/icons-react";
 import type { ItemRow } from "@zogal/shared";
 import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
 import { StaleNotice } from "@/components/StaleNotice";
@@ -7,6 +7,7 @@ import { useShopData } from "@/lib/shopData";
 import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { ItemDialog } from "@/components/ItemDialog";
+import { AddStockDialog } from "@/components/AddStockDialog";
 import { Alert } from "@/components/Alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ export function ItemsScreen() {
   const [q, setQ] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<ItemRow | null>(null);
+  const [restocking, setRestocking] = useState<ItemRow | null>(null);
+  const canRestock = perms.includes("purchases.create");
 
   const items = data.items;
   const codesByItem = new Map<string, string[]>();
@@ -58,13 +61,13 @@ export function ItemsScreen() {
                 <TableHead className="text-right">Suggested</TableHead>
                 <TableHead className="text-right">In stock</TableHead>
                 {viewCost && <TableHead className="text-right">Avg cost</TableHead>}
-                {viewCost && <TableHead className="text-right pr-5">Stock value</TableHead>}
-                {!viewCost && <TableHead className="pr-5"></TableHead>}
+                {viewCost && <TableHead className="text-right">Stock value</TableHead>}
+                <TableHead className="pr-5"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="pl-5 text-muted-foreground">{loading ? "Loading…" : items.length === 0 ? "No items yet." : "No matches."}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="pl-5 text-muted-foreground">{loading ? "Loading…" : items.length === 0 ? "No items yet." : "No matches."}</TableCell></TableRow>
               )}
               {filtered.map((it) => {
                 const onHand = stockFor(it.id);
@@ -84,8 +87,14 @@ export function ItemsScreen() {
                       {onHand === 0 ? <Badge variant="critical">Out</Badge> : onHand <= 2 ? <Badge variant="warning">{onHand} left</Badge> : onHand}
                     </TableCell>
                     {viewCost && <TableCell className="text-right tabular text-muted-foreground">{avg !== undefined ? formatNaira(avg) : "—"}</TableCell>}
-                    {viewCost && <TableCell className="text-right tabular pr-5">{value !== undefined ? formatNaira(value) : "—"}</TableCell>}
-                    {!viewCost && <TableCell className="pr-5" />}
+                    {viewCost && <TableCell className="text-right tabular">{value !== undefined ? formatNaira(value) : "—"}</TableCell>}
+                    <TableCell className="pr-5 text-right">
+                      {canRestock && (
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setRestocking(it); }} title="Receive more of this item">
+                          <IconPackageImport size={14} /> Add stock
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -94,6 +103,7 @@ export function ItemsScreen() {
         </Card>
       </div>
       <ItemDialog item={selected} onOpenChange={(o) => !o && setSelected(null)} onChanged={refresh} />
+      <AddStockDialog item={restocking} onClose={() => setRestocking(null)} onDone={refresh} />
       <AddItemDialog open={showAdd} onOpenChange={setShowAdd} onDone={async (name) => { setShowAdd(false); notifySuccess(`Added “${name}”`); await refresh(); }} />
     </>
   );

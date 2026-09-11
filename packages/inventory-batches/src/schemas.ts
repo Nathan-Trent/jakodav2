@@ -21,6 +21,8 @@ export type NewItem = z.infer<typeof NewItemSchema>;
 
 export const NewPurchaseSchema = z.object({
   shopId: z.uuid(),
+  /** The terminal receiving the delivery (0009) — lets the admin filter by terminal. */
+  deviceId: z.uuid().nullable().optional(),
   supplierName: z.string().trim().max(200).optional(),
   note: z.string().trim().max(1000).optional(),
   purchasedAt: z.iso.datetime().optional(),

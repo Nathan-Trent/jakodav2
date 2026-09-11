@@ -98,6 +98,7 @@ export function PurchasesScreen() {
     try {
       await inventory.recordPurchase({
         shopId: shop.id,
+        deviceId: device?.device_id ?? null,
         supplierName: supplier.trim() || undefined,
         lines: lines.map((l) => ({ itemId: l.item.id, quantity: l.quantity, unitCost: fromKobo(l.unitCost) })),
       });

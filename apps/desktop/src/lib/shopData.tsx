@@ -1,53 +1,45 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { BarcodeRow, BatchRow, ItemRow, SaleRow } from "@zogal/shared";
+import type { BatchRow } from "@zogal/shared";
 import { toKobo, type Kobo } from "@zogal/shared";
-import { fetchShopDashboard, listBarcodes, stockChannel, type ShopDashboard } from "@zogal/inventory-batches";
-import { cacheKey, getCache, putCache } from "@zogal/sync";
+import { fetchShopDashboard, listBarcodes, stockChannel } from "@zogal/inventory-batches";
+import { cacheKey, getCache, pending, putCache, type OutboxEntry } from "@zogal/sync";
+import { composeView, EMPTY_SNAPSHOT as EMPTY, type OfflineSalePayload, type ShopSnapshot, type ShopView } from "@/lib/shopView";
+export { asOf, type ShopSnapshot, type ShopView, type ViewSale } from "@/lib/shopView";
 import { useSession } from "@/lib/session";
+import { useSync } from "@/lib/sync";
 import { getSupabase } from "@/lib/supabase";
 
 /**
- * SYNC: the terminal's working set.
+ * SYNC: the terminal's working set — snapshot + overlay.
  *
- * The till renders from THIS, never straight from the network. On start it is
- * hydrated from IndexedDB (instant, works with no connection), then refreshed
- * from the server when one is available.
+ * Two layers, never mixed:
  *
- * The point Nathan made, and the rule this enforces: being offline means the
- * terminal cannot learn about changes made elsewhere. It does NOT mean the
- * terminal forgets what it already knows. Items, stock, history and figures
- * stay on screen; all that changes is a quiet "as of <time>" notice.
+ *   SNAPSHOT  what the server last told us. Pure. Cached in IndexedDB so it
+ *             is there instantly on start, network or not.
+ *   OVERLAY   what this terminal has done since, still in the outbox. Applied
+ *             on top of the snapshot at read time, never written into it.
  *
- * Local edits (an offline sale) are applied to this set immediately so the
- * next sale sees the right stock, and the server reconciles on replay.
+ * What every screen sees is snapshot ⊕ overlay. So an offline sale lowers the
+ * stock, appears in history (marked "not yet uploaded"), and counts in today's
+ * figures — all computed locally. When it uploads it leaves the overlay; on
+ * the next pull it appears in the snapshot. Never double-counted, never lost,
+ * and — the bug the earlier version had — never "undone" by a refresh that
+ * arrives before the upload does.
+ *
+ * Being offline changes exactly one thing: the snapshot can't get fresher.
+ * That's a staleness notice, not an error, and never an empty screen.
  */
-export interface ShopData {
-  items: ItemRow[];
-  barcodes: BarcodeRow[];
-  /** itemId → units on hand. */
-  stock: Record<string, number>;
-  /** itemId → total value of remaining stock, kobo. Only with items.view_cost. */
-  stockValue: Record<string, number>;
-  batches: BatchRow[];
-  sales: SaleRow[];
-  dashboard: ShopDashboard | null;
-}
-
-const EMPTY: ShopData = { items: [], barcodes: [], stock: {}, stockValue: {}, batches: [], sales: [], dashboard: null };
-
 interface ShopDataContext {
-  data: ShopData;
-  /** True until the first hydrate finishes — show a loading state, not "empty". */
+  data: ShopView;
+  /** True until the first hydrate finishes — show loading, not "empty". */
   loading: boolean;
   refreshing: boolean;
-  /** When this data was last fetched from the server. */
   lastUpdatedAt: Date | null;
-  /** True when we're showing what we last downloaded rather than fresh data. */
+  /** True when showing what we last downloaded rather than fresh data. */
   stale: boolean;
   refresh: () => Promise<void>;
-  /** Apply a local change straight away (offline sale). */
-  applyLocalSale: (lines: { itemId: string; quantity: number }[]) => void;
-  /** Stock net of anything queued but not yet accepted. */
+  /** Re-read the outbox — call after enqueueing so the overlay updates now. */
+  reloadOverlay: () => Promise<void>;
   stockFor: (itemId: string) => number;
   costPerUnit: (itemId: string) => Kobo | undefined;
 }
@@ -56,31 +48,41 @@ const Ctx = createContext<ShopDataContext | null>(null);
 
 export function ShopDataProvider({ children }: { children: ReactNode }) {
   const { active, inventory } = useSession();
+  const { status: syncStatus } = useSync();
   const shopId = active?.shop.id ?? null;
   const viewCost = active?.permissions.includes("items.view_cost") ?? false;
 
-  const [data, setData] = useState<ShopData>(EMPTY);
+  const [snapshot, setSnapshot] = useState<ShopSnapshot>(EMPTY);
+  const [overlay, setOverlay] = useState<OutboxEntry<OfflineSalePayload>[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [stale, setStale] = useState(false);
-  const channelRef = useRef<ReturnType<typeof stockChannel> | null>(null);
+  const wasSyncing = useRef(false);
 
-  const key = shopId ? cacheKey(shopId, "working-set") : null;
+  const key = shopId ? cacheKey(shopId, "snapshot") : null;
+
+  /** The overlay is whatever is still in the outbox for this shop. */
+  const reloadOverlay = useCallback(async () => {
+    if (!shopId) { setOverlay([]); return; }
+    const all = await pending();
+    setOverlay(all.filter((e) => e.kind === "sale" && e.shopId === shopId) as OutboxEntry<OfflineSalePayload>[]);
+  }, [shopId]);
 
   /** Instant: whatever this terminal last downloaded. */
   const hydrate = useCallback(async () => {
     if (!key) { setLoading(false); return; }
-    const entry = await getCache<ShopData>(key);
+    const entry = await getCache<ShopSnapshot>(key);
     if (entry) {
-      setData({ ...EMPTY, ...entry.rows });
+      setSnapshot({ ...EMPTY, ...entry.rows });
       setLastUpdatedAt(new Date(entry.cachedAt));
       setStale(true);
     }
+    await reloadOverlay();
     setLoading(false);
-  }, [key]);
+  }, [key, reloadOverlay]);
 
-  /** Opportunistic: only when there is a connection. Failure is not an error. */
+  /** Pull a fresh snapshot. Only when online; failure is not an error. */
   const refresh = useCallback(async () => {
     if (!shopId || !key || !navigator.onLine) { setStale(true); return; }
     setRefreshing(true);
@@ -99,81 +101,76 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
               .then((r) => { if (r.error) throw r.error; return r.data; })
           : Promise.resolve([] as BatchRow[]),
       ]);
-
-      const next: ShopData = {
-        items,
-        barcodes,
+      const next: ShopSnapshot = {
+        items, barcodes,
         stock: Object.fromEntries(stockMap),
         stockValue: Object.fromEntries(stockRows.map((r) => [r.item_id, toKobo(r.stock_value)])),
-        batches,
-        sales,
-        dashboard,
+        batches, sales, dashboard,
       };
-      setData(next);
+      setSnapshot(next);
       await putCache(key, next);
       setLastUpdatedAt(new Date());
       setStale(false);
     } catch {
-      // Server unreachable mid-session: keep showing what we have.
       setStale(true);
     } finally {
       setRefreshing(false);
+      await reloadOverlay();
     }
-  }, [shopId, key, inventory, viewCost]);
+  }, [shopId, key, inventory, viewCost, reloadOverlay]);
 
   useEffect(() => {
-    setData(EMPTY);
+    setSnapshot(EMPTY);
     setLoading(true);
     void hydrate().then(() => refresh());
   }, [hydrate, refresh]);
 
-  // Refresh when the connection comes back, and when another terminal sells.
+  // SYNC ordering: when the engine finishes a drain (syncing true → false),
+  // pull a fresh snapshot so uploaded sales move from overlay to snapshot in
+  // one step, and we also pick up whatever other terminals did meanwhile.
+  useEffect(() => {
+    const syncing = syncStatus?.syncing ?? false;
+    if (wasSyncing.current && !syncing) void refresh();
+    wasSyncing.current = syncing;
+  }, [syncStatus?.syncing, refresh]);
+
+  // Any change in what's queued (a new offline sale, or one that uploaded)
+  // re-reads the overlay.
+  useEffect(() => { void reloadOverlay(); }, [syncStatus?.pendingCount, reloadOverlay]);
+
+  // Connection back, or another terminal sold → pull.
   useEffect(() => {
     if (!shopId) return;
     const onOnline = () => void refresh();
     window.addEventListener("online", onOnline);
-
     const db = getSupabase();
     const ch = stockChannel(db, shopId);
     ch.on("broadcast", { event: "stock" }, () => void refresh());
     ch.subscribe();
-    channelRef.current = ch;
-
     const poll = window.setInterval(() => { if (navigator.onLine) void refresh(); }, 60_000);
     return () => {
       window.removeEventListener("online", onOnline);
       window.clearInterval(poll);
       void db.removeChannel(ch);
-      channelRef.current = null;
     };
   }, [shopId, refresh]);
 
-  /** Offline sale: decrement locally so the next sale sees the right stock. */
-  const applyLocalSale = useCallback((lines: { itemId: string; quantity: number }[]) => {
-    setData((d) => {
-      const stock = { ...d.stock };
-      for (const l of lines) stock[l.itemId] = Math.max(0, (stock[l.itemId] ?? 0) - l.quantity);
-      const next = { ...d, stock };
-      if (key) void putCache(key, next);
-      return next;
-    });
-  }, [key]);
+  /** snapshot ⊕ overlay — the only thing screens read. */
+  const view = useMemo<ShopView>(() => composeView(snapshot, overlay, viewCost), [snapshot, overlay, viewCost]);
 
   const value = useMemo<ShopDataContext>(() => ({
-    data,
-    loading,
-    refreshing,
-    lastUpdatedAt,
-    stale,
-    refresh,
-    applyLocalSale,
-    stockFor: (itemId) => data.stock[itemId] ?? 0,
+    data: view,
+    loading, refreshing, lastUpdatedAt, stale,
+    refresh, reloadOverlay,
+    stockFor: (itemId) => view.stock[itemId] ?? 0,
     costPerUnit: (itemId) => {
-      const onHand = data.stock[itemId] ?? 0;
-      const value = data.stockValue[itemId];
-      return value !== undefined && onHand > 0 ? (Math.round(value / onHand) as Kobo) : undefined;
+      // Weighted cost of what's left, per the SNAPSHOT (unsent sales consume
+      // batches locally below, but the per-unit average barely moves).
+      const onHand = snapshot.stock[itemId] ?? 0;
+      const v = snapshot.stockValue[itemId];
+      return v !== undefined && onHand > 0 ? (Math.round(v / onHand) as Kobo) : undefined;
     },
-  }), [data, loading, refreshing, lastUpdatedAt, stale, refresh, applyLocalSale]);
+  }), [view, snapshot, loading, refreshing, lastUpdatedAt, stale, refresh, reloadOverlay]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -184,11 +181,3 @@ export function useShopData(): ShopDataContext {
   return v;
 }
 
-/** "as of 12:04" / "as of Tue 14:30" — for the staleness notice. */
-export function asOf(d: Date | null): string {
-  if (!d) return "never";
-  const sameDay = new Date().toDateString() === d.toDateString();
-  return sameDay
-    ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" });
-}

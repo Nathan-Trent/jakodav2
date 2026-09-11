@@ -60,6 +60,7 @@ export class InventoryRepository {
         supplier_name: v.supplierName ?? null,
         note: v.note ?? null,
         purchased_at: v.purchasedAt ?? new Date().toISOString(),
+        device_id: v.deviceId ?? null,
       })
       .select()
       .single<PurchaseRow>();

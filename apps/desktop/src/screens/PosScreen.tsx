@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { IconBarcode, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconBarcode, IconCloudUpload, IconPlus, IconTrash } from "@tabler/icons-react";
 import type { ItemRow } from "@zogal/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@zogal/shared";
 import { announceStockChange, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
@@ -35,7 +35,7 @@ interface CartLine {
  */
 export function PosScreen() {
   const { ctx, active, device, inventory } = useSession();
-  const { data, loading, stockFor, costPerUnit, applyLocalSale, refresh } = useShopData();
+  const { data, loading, stockFor, costPerUnit, reloadOverlay, refresh } = useShopData();
   const { writable } = useSync();
   const shop = active!.shop;
   const perms = active!.permissions;
@@ -130,10 +130,12 @@ export function PosScreen() {
       } else {
         await enqueue({
           kind: "sale", clientRef, shopId: shop.id,
-          deviceId: device?.device_id ?? null, occurredAt: soldAt,
+          deviceId: device?.device_id ?? null, userId: ctx.user.id, occurredAt: soldAt,
           payload: { lines, note: null },
         });
-        applyLocalSale(cart.map((l) => ({ itemId: l.item.id, quantity: l.quantity })));
+        // The overlay re-reads the outbox: stock, history and figures all
+        // move at once, computed locally.
+        await reloadOverlay();
         setCart([]);
         notifySuccess(`Sale saved — ${formatNaira(total)}`, {
           description: "Recorded on this terminal. It uploads automatically when the connection returns.",
@@ -229,8 +231,13 @@ export function PosScreen() {
               <h2 className="text-small font-medium text-muted-foreground mb-2">Recent sales</h2>
               <ul className="divide-y rounded-lg border bg-card">
                 {data.sales.slice(0, 8).map((s) => (
-                  <li key={s.id} className="flex justify-between px-4 py-2 text-sm">
-                    <span className="text-muted-foreground">{new Date(s.sold_at).toLocaleString()}</span>
+                  <li key={s.id} className="flex items-center gap-3 px-4 py-2 text-sm">
+                    <span className="text-muted-foreground flex-1">{new Date(s.sold_at).toLocaleString()}</span>
+                    {s.pending && (
+                      <span className="inline-flex items-center gap-1 text-caption text-status-amber" title="Recorded on this terminal; uploads when the connection returns">
+                        <IconCloudUpload size={12} /> Not yet uploaded
+                      </span>
+                    )}
                     <span className="font-medium tabular">{formatNaira(toKobo(s.total))}</span>
                   </li>
                 ))}

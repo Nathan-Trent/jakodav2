@@ -140,10 +140,12 @@ export class SyncEngine {
       if (e.seq === undefined) continue;
       try {
         const p = e.payload as { lines: unknown[]; note: string | null };
+        // SYNC: the entry's own seller, not whoever is signed in now — a shift
+        // may have changed since the sale (server accepts this as of 0009).
         const { data, error } = await this.o.db.rpc("replay_offline_sale", {
           p_shop_id: e.shopId,
           p_client_ref: e.clientRef,
-          p_sold_by: this.o.userId,
+          p_sold_by: e.userId ?? this.o.userId,
           p_lines: p.lines,
           p_sold_at: e.occurredAt,
           p_device_id: e.deviceId,

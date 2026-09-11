@@ -363,6 +363,9 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   I'll rename them.
 - **2026-09-11** — Stage 5 built (see above). Next: apply 0008, generate the
   keypair, deploy the Edge Function, then test a real outage.
+- **2026-09-11** — Nathan's offline test: selling worked but nothing else
+  reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
+  per-user attribution on shared terminals (0009, approved). 43 tests.
 - **2026-09-11** — Stage 4 built: barcodes (EAN-13 generation, scanner hook,
   labels), Purchases screen with cost-change price prompt, live stock via
   broadcast, collapsible sidebar, UX layer (errors/feedback/Alert/Confirm).

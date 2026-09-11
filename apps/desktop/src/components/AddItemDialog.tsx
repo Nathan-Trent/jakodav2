@@ -9,7 +9,7 @@ import { notifyError } from "@/lib/feedback";
 
 /** Add item + initial stock. Cost is only asked for if the user may record purchases. */
 export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (name: string) => Promise<void> }) {
-  const { active, inventory } = useSession();
+  const { active, inventory, device } = useSession();
   const shop = active!.shop;
   const canPurchase = active!.permissions.includes("purchases.create");
   const [name, setName] = useState("");
@@ -33,6 +33,7 @@ export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; o
         // Initial stock = first immutable batch (PRD §5.1)
         await inventory.recordPurchase({
           shopId: shop.id,
+          deviceId: device?.device_id ?? null,
           note: "Initial stock",
           lines: [{ itemId: item.id, quantity: Number(qty), unitCost: fromKobo(toKobo(cost || "0")) }],
         });

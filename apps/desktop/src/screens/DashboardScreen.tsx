@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { IconAlertTriangle, IconArrowRight, IconRefresh } from "@tabler/icons-react";
+import { IconAlertTriangle, IconArrowRight, IconCloudUpload, IconRefresh } from "@tabler/icons-react";
 import type { ShopDashboard } from "@zogal/inventory-batches";
 import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
 import { PageHeader } from "@/components/AppShell";
@@ -58,7 +58,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
         {/* Headline figures */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <Stat label={mine ? "My takings today" : "Takings today"} value={formatNaira(money(data?.today.sales_total))}
-                sub={`${data?.today.sales_count ?? 0} ${plural(data?.today.sales_count ?? 0, "sale")} · ${data?.today.units_sold ?? 0} ${plural(data?.today.units_sold ?? 0, "unit")}`} primary />
+                sub={`${data?.today.sales_count ?? 0} ${plural(data?.today.sales_count ?? 0, "sale")} · ${data?.today.units_sold ?? 0} ${plural(data?.today.units_sold ?? 0, "unit")}${shopData.pendingSales ? ` · ${shopData.pendingSales} not yet uploaded` : ""}`} primary />
           {viewCost ? (
             <Stat label="Gross profit today" value={formatNaira(money(data?.today.gross_profit))} sub="Selling price minus batch cost" />
           ) : (
@@ -123,10 +123,13 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
               <ul className="divide-y">
                 {recent.map((s) => (
                   <li key={s.id} className="flex items-center gap-4 py-2.5">
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
                       <div className="text-caption text-muted-foreground">
                         {new Date(s.sold_at).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}
                       </div>
+                      {s.pending && (
+                        <Badge variant="warning"><IconCloudUpload size={12} /> Not yet uploaded</Badge>
+                      )}
                     </div>
                     <div className="figure text-[15px] tabular">{formatNaira(toKobo(s.total))}</div>
                   </li>
