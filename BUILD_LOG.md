@@ -164,7 +164,11 @@ Settings are placeholders by design (their stages). Dashboard shows zeros
 until 0005 is applied.
 
 ## Stage 4 — Barcode system
-Status: IN PROGRESS — built; `0006_barcodes.sql` NOT YET APPLIED
+Status: DONE except hardware test (2026-09-11) — 0006 applied; generation,
+scan → cart, unknown-code path, and label print verified with simulated
+scanner keystrokes. **Real USB scanner test pending** — Nathan is getting
+a scanner; if it types slower than 35 ms/key, raise `maxGapMs` in
+`useBarcodeScanner`.
 Scanning, multi-terminal support, barcode generation with uniqueness
 checking, label printing.
 
@@ -201,8 +205,7 @@ checking, label printing.
 - Tests: EAN-13 validation + manual-code schema (12 tests total green).
 
 **Not done:**
-- Real USB scanner not yet tested on hardware (logic verified by timing
-  model only) — Nathan to test with the shop's scanner.
+- Real USB scanner not yet tested on hardware — Nathan to test when he has one.
 - `purchase_cost_corrections` UI (admin cost override) — next.
 - Multi-terminal broadcast verified in code only; needs two terminals.
 
@@ -264,8 +267,10 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
 - **2026-09-11** — Stage 4 built: barcodes (EAN-13 generation, scanner hook,
   labels), Purchases screen with cost-change price prompt, live stock via
   broadcast, collapsible sidebar, UX layer (errors/feedback/Alert/Confirm).
-  `0006_barcodes.sql` handed to Nathan. Palette experiments reverted to
-  Zogal greens. Next: Nathan applies 0006 + tests real scanner.
+  `0006_barcodes.sql` applied. Simulated-scanner verification passed.
+  Fixed toast background (sonner vars need `hsl()` around HSL triplets).
+  Tauri binary rebuilt as `jakoda-desktop.exe`. Next: cost-correction UI,
+  then Stage 5 (offline-first & sync).
 - **2026-09-11** — Stage 3b: rename to Jakoda; Zogal design system applied;
   app shell + dashboard + items + terminals pages; `0005_dashboard.sql`
   handed to Nathan. Verified in browser. Dev note: Tabler icons is ~12k
