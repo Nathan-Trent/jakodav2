@@ -1,11 +1,15 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { IconAlertTriangle, IconArrowRight, IconCloudUpload, IconRefresh } from "@tabler/icons-react";
-import type { ShopDashboard } from "@zogal/inventory-batches";
+import { fetchShopDashboard, type ShopDashboard } from "@zogal/inventory-batches";
+import { cacheKey, readThrough } from "@zogal/sync";
 import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
 import { PageHeader } from "@/components/AppShell";
 import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { TaxWidget } from "@/components/TaxWidget";
+import { PeriodPicker } from "@/components/PeriodPicker";
+import { describeRange, resolvePreset, type PeriodRange } from "@/lib/periods";
+import { getSupabase } from "@/lib/supabase";
 import { useShopData } from "@/lib/shopData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,8 +33,35 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
   const shop = active!.shop;
   const perms = active!.permissions;
   const viewCost = perms.includes("items.view_cost");
-  // Straight from the working set, so the dashboard reads the same offline.
-  const data = shopData.dashboard;
+  // "Today" comes from the working set (offline-safe, includes unsent sales).
+  // Any other period is fetched for that window and cached, so a period you
+  // have looked at before still shows offline — with the usual "as of" note.
+  const todayData = shopData.dashboard;
+  const [period, setPeriod] = useState<PeriodRange>(() => resolvePreset("today"));
+  const [rangeData, setRangeData] = useState<{ d: ShopDashboard; fromCache: boolean } | null>(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const isToday = period.preset === "today";
+
+  useEffect(() => {
+    if (isToday) { setRangeData(null); return; }
+    let cancelled = false;
+    setRangeLoading(true);
+    void readThrough<ShopDashboard>(
+      cacheKey(shop.id, `dashboard:${period.from}:${period.to}`),
+      () => fetchShopDashboard(getSupabase(), shop.id, period.from, period.to),
+    ).then((r) => {
+      if (cancelled) return;
+      setRangeData(r.data ? { d: r.data, fromCache: r.fromCache } : null);
+      setRangeLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [isToday, period.from, period.to, shop.id]);
+
+  const data = isToday ? todayData : (rangeData?.d ?? null);
+  const fig = isToday
+    ? todayData?.today
+    : (rangeData?.d.range ?? null);
+  const periodWord = isToday ? "today" : describeRange(period).toLowerCase();
   const [terminal, setTerminal] = useState<string | null>(null);
   const terminalName = useTerminalName();
   const recent = shopData.sales.filter((s) => !terminal || s.device_id === terminal).slice(0, 8);
@@ -46,9 +77,10 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
     <>
       <PageHeader
         title={`${greeting}, ${firstName}`}
-        description={mine ? "Your sales today" : `${shop.name} · today at a glance`}
+        description={mine ? `Your sales ${periodWord}` : `${shop.name} · ${describeRange(period)}`}
         actions={
           <>
+            <PeriodPicker value={period} onChange={setPeriod} />
             <Button variant="outline" onClick={() => void load()} disabled={loading}><IconRefresh size={16} /> Refresh</Button>
             {perms.includes("sales.create") && (
               <Button onClick={() => onNavigate("sell")}>New sale <IconArrowRight size={16} /></Button>
@@ -59,14 +91,21 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
 
       <div className="px-8 pb-8 grid gap-6">
         <StaleNotice />
+        {!isToday && rangeData?.fromCache && (
+          <p className="text-caption text-muted-foreground">Showing figures for {describeRange(period)} as last downloaded.</p>
+        )}
+        {!isToday && !rangeData && !rangeLoading && (
+          <p className="text-caption text-muted-foreground">Figures for {describeRange(period)} need a connection the first time; they're kept for offline after that.</p>
+        )}
         {/* Headline figures */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <Stat label={mine ? "My takings today" : "Takings today"} value={formatNaira(money(data?.today.sales_total))}
-                sub={`${data?.today.sales_count ?? 0} ${plural(data?.today.sales_count ?? 0, "sale")} · ${data?.today.units_sold ?? 0} ${plural(data?.today.units_sold ?? 0, "unit")}${shopData.pendingSales ? ` · ${shopData.pendingSales} not yet uploaded` : ""}`} primary />
+          <Stat label={mine ? `My takings ${periodWord}` : `Takings ${periodWord}`} value={formatNaira(money(fig?.sales_total))}
+                sub={`${fig?.sales_count ?? 0} ${plural(fig?.sales_count ?? 0, "sale")} · ${fig?.units_sold ?? 0} ${plural(fig?.units_sold ?? 0, "unit")}${isToday && shopData.pendingSales ? ` · ${shopData.pendingSales} not yet uploaded` : ""}`} primary />
           {viewCost ? (
-            <Stat label="Gross profit today" value={formatNaira(money(data?.today.gross_profit))} sub="Selling price minus batch cost" />
+            <Stat label={`Gross profit ${periodWord}`} value={formatNaira(money(fig?.gross_profit))}
+                  sub={!isToday && rangeData?.d.range?.net_profit != null ? `Net ${formatNaira(money(rangeData.d.range.net_profit))} after ${formatNaira(money(rangeData.d.range.expenses))} expenses` : "Selling price minus batch cost"} />
           ) : (
-            <Stat label="Units sold today" value={String(data?.today.units_sold ?? 0)} sub="Across all your sales" />
+            <Stat label={`Units sold ${periodWord}`} value={String(fig?.units_sold ?? 0)} sub="Across all your sales" />
           )}
           <Stat label="Stock on hand" value={String(data?.stock.units ?? 0)}
                 sub={viewCost ? `${data?.stock.items ?? 0} items · worth ${formatNaira(money(data?.stock.value))}` : `${data?.stock.items ?? 0} items`} />
@@ -80,10 +119,10 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
           <Card>
             <CardContent className="grid gap-4">
               <div className="flex items-baseline justify-between">
-                <div className="text-title">Last 7 days</div>
-                <div className="text-caption text-muted-foreground">{mine ? "Your sales" : "Whole shop"}</div>
+                <div className="text-title">{isToday ? "Last 7 days" : describeRange(period)}</div>
+                <div className="text-caption text-muted-foreground">{mine ? "Your sales" : "Whole shop"}{!isToday && rangeData?.d.bucket === "week" ? " · by week" : ""}</div>
               </div>
-              <WeekBars week={data?.week ?? []} />
+              <WeekBars week={isToday ? (data?.week ?? []) : (rangeData?.d.series ?? [])} highlightLast={isToday} />
             </CardContent>
           </Card>
 
@@ -182,22 +221,27 @@ function StatusRow({ label, value, badge, onClick }: { label: string; value: str
 }
 
 /** Seven bars, no chart lib. Height = share of the week's max. */
-function WeekBars({ week }: { week: ShopDashboard["week"] }) {
+function WeekBars({ week, highlightLast = true }: { week: ShopDashboard["week"]; highlightLast?: boolean }) {
   const totals = week.map((d) => money(d.total));
   const max = Math.max(1, ...totals);
+  const many = week.length > 14;
   return (
-    <div className="grid grid-cols-7 gap-2 items-end h-36">
+    <div className="flex gap-1 items-end h-36" style={{ gap: many ? 2 : 8 }}>
       {week.map((d, i) => {
         const h = Math.max(4, Math.round((totals[i]! / max) * 100));
-        const isToday = i === week.length - 1;
+        const isToday = highlightLast && i === week.length - 1;
         return (
-          <div key={d.day} className="grid gap-1.5 content-end h-full" title={`${formatNaira(totals[i]!)} · ${d.count} sales`}>
+          <div key={d.day} className="grid gap-1.5 content-end h-full flex-1 min-w-0" title={`${new Date(d.day + "T00:00:00").toLocaleDateString()} · ${formatNaira(totals[i]!)} · ${d.count} sales`}>
             <div className="flex items-end h-full">
-              <div className={cn("w-full rounded-[6px] transition-[height]", isToday ? "bg-brand-action" : "bg-brand-mint")} style={{ height: `${h}%` }} />
+              <div className={cn("w-full rounded-[4px] transition-[height]", isToday ? "bg-brand-action" : "bg-brand-mint")} style={{ height: `${h}%` }} />
             </div>
-            <div className={cn("text-micro text-center", isToday ? "text-foreground" : "text-muted-foreground")}>
-              {new Date(d.day + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2)}
-            </div>
+            {!many && (
+              <div className={cn("text-micro text-center truncate", isToday ? "text-foreground" : "text-muted-foreground")}>
+                {week.length <= 7
+                  ? new Date(d.day + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2)
+                  : new Date(d.day + "T00:00:00").getDate()}
+              </div>
+            )}
           </div>
         );
       })}

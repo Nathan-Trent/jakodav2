@@ -303,7 +303,7 @@ it already downloaded. Fixed:
 - Purchases/expenses are not queued offline yet — only sales.
 
 ## Stage 6 — Tax engine foundation
-Status: BUILT (2026-09-12) — `0010_tax_engine.sql` NOT YET APPLIED.
+Status: DONE (2026-09-12) — `0010_tax_engine.sql` applied.
 Config-driven rules table, category selection, live threshold widget;
 refunds/reliefs data model present but inactive.
 
@@ -362,6 +362,32 @@ flips the flag. Nothing to rebuild when the numbers are confirmed.
   output VAT only — said so in the UI.
 - `shop.timezone` is used server-side; the client uses the terminal's day
   for "this month" — same result unless a terminal is set to a far timezone.
+
+## Post-Stage-6 polish (Nathan's feedback, 2026-09-12)
+Status: BUILT — `0011_dashboard_range.sql` NOT YET APPLIED.
+
+- **Add stock is a two-step wizard, one save.** Step 1 quantity + cost →
+  *Next*; step 2 floor + suggested (always shown, pre-filled, margin
+  against the NEW cost, floor ≤ suggested validated) → *Save*. Nothing is
+  written until Save: `recordPurchase`, then `setItemPrices` only if the
+  prices actually changed (logged reason "Restock: cost A → B"), one
+  success toast. Root cause of "it clears before I can think": the reset
+  effect depended on `lastCost`, which changed when the batch list refreshed
+  after the first save — now keyed on the item id only.
+- **Period picker** (`lib/periods.ts`, `components/PeriodPicker.tsx`):
+  Today / Yesterday / Last 7 / Last 30 / This month / Last month / This
+  year / Last year / Custom range.
+  - Dashboard: "Today" stays on the offline working set (includes unsent
+    sales). Any other period calls `shop_dashboard(shop, from, to)` and
+    caches the answer per window (`dashboard:<from>:<to>`), so a period
+    looked at before still shows offline with the "as last downloaded"
+    note. Headline stats switch to the range, gross profit shows net after
+    expenses, the chart renders the range series (weekly buckets > 92 days).
+  - Expenses: totals, category tiles and the list filter to the range
+    (default This month). Client-side over the cached list.
+- `0011_dashboard_range.sql` (**to run**): 3-arg `shop_dashboard` with
+  `range` / `series` / `bucket`; 1-arg form delegates to today. Max 800
+  days. No table changes.
 
 ## Stage 7 — Notebook photo capture
 Status: NOT STARTED
@@ -422,6 +448,9 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
 - **2026-09-12** — Stage 6 built: tax engine (pure, 15 tests), 0010
   migration with draft-flagged seed, Tax + Expenses screens, dashboard
   widget. Handed to Nathan to apply. 64 tests green.
+- **2026-09-12** — 0010 applied (Stage 6 DONE). Add-stock rebuilt as a
+  two-step wizard with a single save; period picker on Dashboard and
+  Expenses; `0011_dashboard_range.sql` handed to Nathan. Next: Stage 7.
 - **2026-09-11** — Nathan's offline test: selling worked but nothing else
   reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
   per-user attribution on shared terminals (0009, approved). 43 tests.

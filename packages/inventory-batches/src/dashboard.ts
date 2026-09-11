@@ -12,6 +12,17 @@ export interface ShopDashboard {
     gross_profit: NumericString | number | null;
   };
   week: { day: string; total: NumericString | number; count: number }[];
+  /** Present from 0011: figures for the requested window. */
+  range?: {
+    from: string; to: string; days: number;
+    sales_count: number; sales_total: NumericString | number; units_sold: number;
+    gross_profit: NumericString | number | null;
+    expenses: NumericString | number | null;
+    net_profit: NumericString | number | null;
+  };
+  /** Per-day (or per-week beyond ~3 months) series over the window. */
+  series?: { day: string; total: NumericString | number; count: number }[];
+  bucket?: "day" | "week";
   stock: {
     items: number;
     units: number;
@@ -25,8 +36,10 @@ export interface ShopDashboard {
   scope: "shop" | "mine";
 }
 
-export async function fetchShopDashboard(db: SupabaseClient, shopId: string): Promise<ShopDashboard> {
-  const { data, error } = await db.rpc("shop_dashboard", { p_shop_id: shopId });
+export async function fetchShopDashboard(db: SupabaseClient, shopId: string, from?: string, to?: string): Promise<ShopDashboard> {
+  const { data, error } = from && to
+    ? await db.rpc("shop_dashboard", { p_shop_id: shopId, p_from: from, p_to: to })
+    : await db.rpc("shop_dashboard", { p_shop_id: shopId });
   if (error) throw error;
   return data as ShopDashboard;
 }

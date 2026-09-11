@@ -7,6 +7,8 @@ import { Alert } from "@/components/Alert";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
+import { PeriodPicker } from "@/components/PeriodPicker";
+import { describeRange, resolvePreset, type PeriodRange } from "@/lib/periods";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,26 +54,32 @@ export function ExpensesScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [toVoid, setToVoid] = useState<ExpenseRow | null>(null);
   const [terminal, setTerminal] = useState<string | null>(null);
+  const [period, setPeriod] = useState<PeriodRange>(() => resolvePreset("this_month"));
 
-  const rows = data.expenses.filter((e) => !terminal || e.device_id === terminal);
+  // The cached list is the last ~200 expenses; a long period may be
+  // incomplete offline, and the notice says so.
+  const inPeriod = (e: ExpenseRow) => e.incurred_on >= period.from && e.incurred_on <= period.to;
+  const rows = data.expenses.filter((e) => (!terminal || e.device_id === terminal) && inPeriod(e));
   const live = rows.filter((e) => !e.voided_at);
-  const monthTotal = useMemo(() => {
-    const ym = new Date().toISOString().slice(0, 7);
-    return live.filter((e) => e.incurred_on.startsWith(ym)).reduce((s, e) => s + toKobo(e.amount), 0) as Kobo;
-  }, [live]);
+  const periodTotal = useMemo(() => live.reduce((s, e) => s + toKobo(e.amount), 0) as Kobo, [live]);
   const byCategory = useMemo(() => {
-    const ym = new Date().toISOString().slice(0, 7);
     const m = new Map<string, number>();
-    for (const e of live) if (e.incurred_on.startsWith(ym)) m.set(e.category_key, (m.get(e.category_key) ?? 0) + toKobo(e.amount));
+    for (const e of live) m.set(e.category_key, (m.get(e.category_key) ?? 0) + toKobo(e.amount));
     return m;
   }, [live]);
+  const periodWord = describeRange(period).toLowerCase();
 
   return (
     <>
       <PageHeader
         title="Expenses"
         description="Rent, transport, staff and the rest — what turns gross profit into real profit."
-        actions={canRecord && <Button onClick={() => setShowAdd(true)} disabled={!writable || !online} title={!online ? "Needs a connection" : undefined}><IconPlus size={16} /> Record expense</Button>}
+        actions={
+          <>
+            <PeriodPicker value={period} onChange={setPeriod} />
+            {canRecord && <Button onClick={() => setShowAdd(true)} disabled={!writable || !online} title={!online ? "Needs a connection" : undefined}><IconPlus size={16} /> Record expense</Button>}
+          </>
+        }
       />
       <div className="px-8 pb-8 grid gap-4">
         <StaleNotice />
@@ -84,15 +92,15 @@ export function ExpensesScreen() {
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <Card className="py-5 gap-0 bg-brand-forest text-white border-transparent">
             <CardContent className="px-5 grid gap-1">
-              <div className="text-micro text-white/60">This month</div>
-              <div className="figure figure-lg">{formatNaira(monthTotal)}</div>
-              <div className="text-caption text-white/60">{live.filter((e) => e.incurred_on.startsWith(new Date().toISOString().slice(0, 7))).length} expenses</div>
+              <div className="text-micro text-white/60">{describeRange(period)}</div>
+              <div className="figure figure-lg">{formatNaira(periodTotal)}</div>
+              <div className="text-caption text-white/60">{live.length} {live.length === 1 ? "expense" : "expenses"}</div>
             </CardContent>
           </Card>
           {CATEGORIES.slice(0, 3).map((c) => (
             <Card key={c.key} className="py-5 gap-0">
               <CardContent className="px-5 grid gap-1">
-                <div className="text-micro text-muted-foreground">{c.name} · this month</div>
+                <div className="text-micro text-muted-foreground">{c.name} · {periodWord}</div>
                 <div className="figure figure-lg">{formatNaira((byCategory.get(c.key) ?? 0) as Kobo)}</div>
               </CardContent>
             </Card>
@@ -101,7 +109,7 @@ export function ExpensesScreen() {
 
         <Card className="py-0">
           <div className="px-5 pt-4 pb-2 flex items-center justify-between gap-3">
-            <div className="text-title">All expenses</div>
+            <div className="text-title">Expenses · {describeRange(period)}</div>
             <TerminalFilter value={terminal} onChange={setTerminal} />
           </div>
           <Table>
@@ -118,7 +126,7 @@ export function ExpensesScreen() {
             <TableBody>
               {rows.length === 0 && (
                 <TableRow><TableCell colSpan={6} className="pl-5 text-muted-foreground">
-                  {loading ? "Loading…" : canRecord ? "No expenses yet. Record rent, transport and staff costs so profit is true." : "No expenses recorded."}
+                  {loading ? "Loading…" : data.expenses.length === 0 && canRecord ? "No expenses yet. Record rent, transport and staff costs so profit is true." : `No expenses ${periodWord}.`}
                 </TableCell></TableRow>
               )}
               {rows.map((e) => (
