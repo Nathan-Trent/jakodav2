@@ -5,3 +5,4 @@ export * from "./dashboard.js";
 export * from "./barcodes.js";
 export * from "./customers.js";
 export * from "./sales-history.js";
+export * from "./notebook.js";

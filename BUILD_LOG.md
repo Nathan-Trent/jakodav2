@@ -425,7 +425,58 @@ Status: BUILT — `0012_customers.sql` NOT YET APPLIED. 0011 applied.
   (record_sale has no `p_customer_id` yet) — apply 0012 before using it.
 
 ## Stage 7 — Notebook photo capture
-Status: NOT STARTED
+Status: BUILT (2026-09-12) — `0013_platform_settings_notebook.sql` NOT YET
+APPLIED; Edge Function `parse-notebook-page` NOT YET DEPLOYED (needs
+`ANTHROPIC_API_KEY` secret). Not type-checked locally (no Deno on this
+machine) — first deploy will tell.
+
+**Nathan's rule (2026-09-12): platform keys are set by the BUSINESS back
+office, not the shop owner, and not in .env.** Built as `platform_settings`
+(+ `platform_settings_history`, `platform_admins`, `is_platform_admin()`).
+Shops read through `platform_setting(key)`; only platform admins can write.
+The admin UI lands with the web dashboard (Stage 8); until then values
+change via SQL (comment at the top of 0013). Seeded: `notebook.enabled`,
+`notebook.free_scans_per_month` (5), `notebook.model` (claude-opus-5),
+`notebook.max_rows_per_page` (60). Nathan must add himself to
+`platform_admins` (one insert, given with the migration).
+
+**Built:**
+- `notebook_scans` (one row per page; image never stored), `notebook_scan_quota()`
+  (per-shop, per shop-local month; failed scans don't count),
+  `notebook_scan_begin()` (as the user: sales.create + quota, refuses BEFORE
+  any model call so an exhausted allowance costs nothing),
+  `notebook_scan_close()` (confirmed / discarded + sale ids).
+- Edge Function `supabase/functions/parse-notebook-page`: the only place
+  the system calls an AI model. Runs as the signed-in user for the begin +
+  item list (RLS), service role only to store the result. Claude Opus 5,
+  adaptive thinking, effort medium, structured output (zod schema: page
+  date, rows {item_text, item_id, quantity, unit_price, line_total,
+  confidence, note}, warnings). Item ids returned by the model are checked
+  against the shop's real items. Prompt is cached. Image ≤ 4 MB, JPEG/PNG/WebP.
+- `packages/inventory-batches/src/notebook.ts`: `fetchScanQuota`,
+  `parseNotebookPage` (surfaces the server's reason; 402 = allowance
+  exhausted), `closeScan`.
+- Desktop `NotebookScreen` ("Scan a page", anyone with sales.create):
+  allowance badge always visible; choose photo (downscaled to ≤1600px JPEG
+  client-side) → "Reading the page…" → review: photo beside an editable
+  table (item select pre-matched, qty, price, per-row confidence + note,
+  per-row problems: choose item / qty / price / below floor / stock), one
+  date for the page (read from the page if written) → "Record N sales" =
+  one ordinary `record_sale` per row, then the scan is closed with the sale
+  ids. Discard asks first. Online only.
+
+**Not done / notes:**
+- Purchases from photos — sales only for now.
+- Paid scans beyond the allowance — refused with a message; billing is Stage 8.
+- Camera capture on desktop uses the OS file picker; `capture="environment"`
+  will open the camera on a phone/tablet browser when the web build exists.
+- No feedback loop from corrections back to the prompt yet.
+
+## Scheduled: temporary partner web build (Nathan, 2026-09-12)
+At the END of the build sequence: host the same app as a web build (it is a
+Vite app inside Tauri already) so a partner can sign up and test without
+the desktop install. Switched off / discontinued when Nathan says. Not
+started; nothing built for it yet.
 
 ## Stage 8 — Web dashboard
 Status: NOT STARTED
@@ -489,6 +540,10 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
 - **2026-09-12** — 0011 applied. Sell screen trimmed to selling only; Sales
   history screen; optional Customers module (0012, handed to Nathan). Next:
   Stage 7.
+- **2026-09-12** — 0012 applied. Stage 7 built: platform settings (admin-set
+  keys), notebook scans + quota, `parse-notebook-page` Edge Function,
+  Scan-a-page screen. 0013 + function deploy handed to Nathan. Noted the
+  partner web build for the end of the sequence.
 - **2026-09-11** — Nathan's offline test: selling worked but nothing else
   reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
   per-user attribution on shared terminals (0009, approved). 43 tests.

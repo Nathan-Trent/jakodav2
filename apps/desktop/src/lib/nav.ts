@@ -14,11 +14,12 @@ import {
   IconUsers,
   IconAddressBook,
   IconHistory,
+  IconCamera,
   type Icon,
 } from "@tabler/icons-react";
 
 export type PageKey =
-  | "dashboard" | "sell" | "sales" | "customers" | "items" | "purchases" | "expenses"
+  | "dashboard" | "sell" | "sales" | "customers" | "notebook" | "items" | "purchases" | "expenses"
   | "staff" | "devices" | "reports" | "tax" | "settings" | "conflicts";
 
 export interface NavItem {
@@ -42,6 +43,7 @@ export const NAV: NavItem[] = [
   // Everyone: a cashier sees their own sales (RLS), the owner the whole shop.
   { key: "sales", label: "Sales", icon: IconHistory },
   { key: "customers", label: "Customers", icon: IconAddressBook, anyOf: ["sales.create", "customers.manage"] },
+  { key: "notebook", label: "Scan a page", icon: IconCamera, anyOf: ["sales.create"] },
   { key: "items", label: "Items", icon: IconBox },
   { key: "purchases", label: "Purchases", icon: IconTruckDelivery, anyOf: ["purchases.create"] },
   { key: "expenses", label: "Expenses", icon: IconCash, anyOf: ["expenses.create", "expenses.view"] },
