@@ -160,7 +160,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
               <div className="text-title">Recent sales</div>
               <div className="flex items-center gap-3">
                 {!mine && <TerminalFilter value={terminal} onChange={setTerminal} />}
-                <button className="text-caption text-muted-foreground hover:text-foreground" onClick={() => onNavigate("reports")}>All sales</button>
+                <button className="text-caption text-muted-foreground hover:text-foreground" onClick={() => onNavigate("sales")}>All sales</button>
               </div>
             </div>
             {recent.length === 0 ? (

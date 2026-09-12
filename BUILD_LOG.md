@@ -389,6 +389,41 @@ Status: BUILT — `0011_dashboard_range.sql` NOT YET APPLIED.
   `range` / `series` / `bucket`; 1-arg form delegates to today. Max 800
   days. No table changes.
 
+## Sales history, Sell cleanup, Customers (Nathan, 2026-09-12)
+Status: BUILT — `0012_customers.sql` NOT YET APPLIED. 0011 applied.
+
+- **Sell does one job.** "Recent sales" removed from the till. The screen is
+  scan/tap → cart → total → Record sale, plus an optional Customer row at the
+  top of the cart ("Walk-in" until changed).
+- **Sales screen** (`screens/SalesScreen.tsx`, new sidebar entry for
+  everyone — RLS scopes a cashier to their own): period picker, search
+  (item / customer / seller), seller + terminal filters (owner), totals strip
+  (takings, count, units, average, gross profit with `items.view_cost`), one
+  row per sale with an items summary ("Indomie ×3, Peak Milk ×1 · 2 more"),
+  click → detail dialog (lines, seller, terminal, customer, cost + profit).
+  SYNC: fetched per window and cached (`sales:<from>:<to>`); unsent sales
+  from the outbox are merged on top, so the list is never behind the till.
+  Dashboard "All sales" now goes here.
+- **Customers** (`0012_customers.sql`, `packages/inventory-batches/src/customers.ts`,
+  `screens/CustomersScreen.tsx`, `components/CustomerPicker.tsx`):
+  `customers` table (name, optional unique-per-shop phone, note, active),
+  `sales.customer_id` nullable, new permission `customers.manage` (owner +
+  manager). Anyone who can sell may attach or add a customer at the till;
+  editing/deactivating needs `customers.manage`. Customers screen = list,
+  search, add/edit/deactivate, click → purchase history (embedded Sales
+  screen filtered to them). `record_sale` gained `p_customer_id`;
+  `replay_offline_sale` gained `p_customer` jsonb — SYNC: an offline sale
+  carries `{id}` for a known customer or `{name, phone}` for one added
+  offline; replay matches by phone in the shop first so two terminals adding
+  the same regular offline produce one record. Customers added offline
+  appear in the picker immediately (composeView overlays them from pending
+  sales). Never fails a sale over a customer: an unknown id records a walk-in.
+- Deliberately NOT built (own units of work): customer credit / "book",
+  customer-specific prices, receipts/SMS to customers, loyalty.
+- Until 0012 is applied: customers list is empty (fetch fails soft), the
+  Customer row on Sell shows but recording a sale with a customer will fail
+  (record_sale has no `p_customer_id` yet) — apply 0012 before using it.
+
 ## Stage 7 — Notebook photo capture
 Status: NOT STARTED
 
@@ -450,7 +485,10 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   widget. Handed to Nathan to apply. 64 tests green.
 - **2026-09-12** — 0010 applied (Stage 6 DONE). Add-stock rebuilt as a
   two-step wizard with a single save; period picker on Dashboard and
-  Expenses; `0011_dashboard_range.sql` handed to Nathan. Next: Stage 7.
+  Expenses; `0011_dashboard_range.sql` handed to Nathan.
+- **2026-09-12** — 0011 applied. Sell screen trimmed to selling only; Sales
+  history screen; optional Customers module (0012, handed to Nathan). Next:
+  Stage 7.
 - **2026-09-11** — Nathan's offline test: selling worked but nothing else
   reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
   per-user attribution on shared terminals (0009, approved). 43 tests.

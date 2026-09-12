@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { IconBarcode, IconCloudUpload, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconBarcode, IconPlus, IconTrash } from "@tabler/icons-react";
 import type { ItemRow } from "@zogal/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, type Kobo } from "@zogal/shared";
-import { announceStockChange, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
+import { announceStockChange, createCustomer, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
 import { enqueue } from "@zogal/sync";
 import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
+import { CustomerPicker } from "@/components/CustomerPicker";
 import { Alert } from "@/components/Alert";
 import { StaleNotice } from "@/components/StaleNotice";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { notifyError, notifyInfo, notifySuccess } from "@/lib/feedback";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
+import type { OfflineCustomerRef } from "@/lib/shopView";
 import { useSync } from "@/lib/sync";
 import { getSupabase } from "@/lib/supabase";
 import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
@@ -39,8 +41,11 @@ function lineNumbers(l: CartLine): { quantity: number | null; unitPrice: Kobo | 
 
 /**
  * The till. Reads entirely from the terminal's working set (shopData), so it
- * stays fully usable with no network: items, prices, stock and recent sales
- * are whatever was last downloaded, and new sales queue locally.
+ * stays fully usable with no network: items, prices and stock are whatever
+ * was last downloaded, and new sales queue locally.
+ *
+ * This screen does ONE job — the sale in front of the cashier. History,
+ * figures and customers live on their own screens (Nathan, 2026-09-12).
  */
 export function PosScreen() {
   const { ctx, active, device, inventory } = useSession();
@@ -55,6 +60,7 @@ export function PosScreen() {
   const [busy, setBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [lastScan, setLastScan] = useState<{ code: string; ok: boolean; name?: string } | null>(null);
+  const [customer, setCustomer] = useState<OfflineCustomerRef | null>(null);
 
   function addToCart(item: ItemRow) {
     setCart((c) => {
@@ -136,25 +142,38 @@ export function PosScreen() {
 
     try {
       if (navigator.onLine) {
+        // A customer added at the till is created first so the sale can
+        // reference it; a known one is passed by id.
+        let customerId: string | null = null;
+        if (customer && "id" in customer) customerId = customer.id;
+        else if (customer) {
+          const created = await createCustomer(getSupabase(), {
+            shopId: shop.id, name: customer.name, phone: customer.phone, createdBy: ctx.user.id,
+          });
+          customerId = created.id;
+        }
         const sale = await inventory.recordSale({
           shopId: shop.id, clientRef, soldBy: ctx.user.id,
-          deviceId: device?.device_id ?? null, soldAt,
+          deviceId: device?.device_id ?? null, soldAt, customerId,
           lines: lines.map(({ item_id, quantity, unit_price }) => ({ item_id, quantity, unit_price })),
         });
         setCart([]);
-        notifySuccess(`Sale recorded — ${formatNaira(toKobo(sale.total))}`);
+        setCustomer(null);
+        notifySuccess(`Sale recorded — ${formatNaira(toKobo(sale.total))}`, customer ? { description: `For ${customer.name}.` } : undefined);
         await refresh();
         void announceStockChange(stockChannel(getSupabase(), shop.id), device?.device_id ?? null);
       } else {
         await enqueue({
           kind: "sale", clientRef, shopId: shop.id,
           deviceId: device?.device_id ?? null, userId: ctx.user.id, occurredAt: soldAt,
-          payload: { lines, note: null },
+          // SYNC: the customer reference rides with the sale (0012 replay).
+          payload: { lines, note: null, customer },
         });
         // The overlay re-reads the outbox: stock, history and figures all
         // move at once, computed locally.
         await reloadOverlay();
         setCart([]);
+        setCustomer(null);
         notifySuccess(`Sale saved — ${formatNaira(total)}`, {
           description: "Recorded on this terminal. It uploads automatically when the connection returns.",
         });
@@ -244,28 +263,11 @@ export function PosScreen() {
             </div>
           )}
 
-          {data.sales.length > 0 && (
-            <div>
-              <h2 className="text-small font-medium text-muted-foreground mb-2">Recent sales</h2>
-              <ul className="divide-y rounded-lg border bg-card">
-                {data.sales.slice(0, 8).map((s) => (
-                  <li key={s.id} className="flex items-center gap-3 px-4 py-2 text-sm">
-                    <span className="text-muted-foreground flex-1">{new Date(s.sold_at).toLocaleString()}</span>
-                    {s.pending && (
-                      <span className="inline-flex items-center gap-1 text-caption text-status-amber" title="Recorded on this terminal; uploads when the connection returns">
-                        <IconCloudUpload size={12} /> Not yet uploaded
-                      </span>
-                    )}
-                    <span className="font-medium tabular">{formatNaira(toKobo(s.total))}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </section>
 
         <aside className="border-l bg-card p-5 flex flex-col gap-3 overflow-y-auto">
           <h2 className="font-medium">Sale</h2>
+          <CustomerPicker value={customer} onChange={setCustomer} disabled={busy || !can("sales.create")} />
           {cart.length === 0 && (
             <div className="text-sm text-muted-foreground flex items-center gap-2">
               <IconBarcode size={16} /> Scan a barcode or tap an item to add it.

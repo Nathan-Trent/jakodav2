@@ -9,6 +9,8 @@ import { LoginScreen } from "@/screens/LoginScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PosScreen } from "@/screens/PosScreen";
+import { SalesScreen } from "@/screens/SalesScreen";
+import { CustomersScreen } from "@/screens/CustomersScreen";
 import { ItemsScreen } from "@/screens/ItemsScreen";
 import { DevicesScreen } from "@/screens/DevicesScreen";
 import { PurchasesScreen } from "@/screens/PurchasesScreen";
@@ -53,6 +55,8 @@ function Router() {
   if (current.comingIn) content = <ComingSoonScreen item={current} />;
   else if (current.key === "conflicts") content = <ConflictsScreen />;
   else if (current.key === "sell") content = <PosScreen />;
+  else if (current.key === "sales") content = <SalesScreen />;
+  else if (current.key === "customers") content = <CustomersScreen />;
   else if (current.key === "items") content = <ItemsScreen />;
   else if (current.key === "devices") content = <DevicesScreen />;
   else if (current.key === "purchases") content = <PurchasesScreen />;

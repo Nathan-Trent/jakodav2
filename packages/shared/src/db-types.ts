@@ -141,6 +141,21 @@ export interface SaleRow {
   status: "completed" | "voided";
   total: NumericString;
   note: string | null;
+  /** Null = walk-in. Optional customer attached at the till (0012). */
+  customer_id: UUID | null;
+  created_at: ISOTimestamp;
+  updated_at: ISOTimestamp;
+}
+
+/** A shop's customer list (0012). Plain contact record — no credit, no prices. */
+export interface CustomerRow {
+  id: UUID;
+  shop_id: UUID;
+  name: string;
+  phone: string | null;
+  note: string | null;
+  is_active: boolean;
+  created_by: UUID | null;
   created_at: ISOTimestamp;
   updated_at: ISOTimestamp;
 }

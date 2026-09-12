@@ -7,6 +7,7 @@ export const PERMISSIONS = [
   "sales.create",
   "sales.void",
   "sales.view_all",
+  "customers.manage",
   "items.create",
   "items.edit",
   "items.edit_floor_price",

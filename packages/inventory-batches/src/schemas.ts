@@ -53,6 +53,8 @@ export const NewSaleSchema = z.object({
   deviceId: z.uuid().nullable().optional(),
   soldAt: z.iso.datetime().optional(),
   note: z.string().trim().max(1000).optional(),
+  /** Optional customer (0012). Omit for a walk-in. */
+  customerId: z.uuid().nullable().optional(),
   lines: z.array(SaleLineInputSchema).min(1),
 });
 export type NewSale = z.infer<typeof NewSaleSchema>;

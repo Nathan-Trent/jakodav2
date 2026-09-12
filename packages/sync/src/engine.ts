@@ -139,7 +139,9 @@ export class SyncEngine {
     for (const e of entries) {
       if (e.seq === undefined) continue;
       try {
-        const p = e.payload as { lines: unknown[]; note: string | null };
+        // SYNC: `customer` is either {id} for an existing customer or
+        // {name, phone} for one added offline; the server resolves it (0012).
+        const p = e.payload as { lines: unknown[]; note: string | null; customer?: unknown };
         // SYNC: the entry's own seller, not whoever is signed in now — a shift
         // may have changed since the sale (server accepts this as of 0009).
         const { data, error } = await this.o.db.rpc("replay_offline_sale", {
@@ -150,6 +152,7 @@ export class SyncEngine {
           p_sold_at: e.occurredAt,
           p_device_id: e.deviceId,
           p_note: p.note,
+          p_customer: p.customer ?? null,
         });
         if (error) throw error;
         const res = data as { conflicts: number };

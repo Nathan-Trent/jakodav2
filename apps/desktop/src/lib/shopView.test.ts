@@ -32,9 +32,10 @@ const snapshot: ShopSnapshot = {
   devices: [],
   tax: null,
   expenses: [],
+  customers: [],
   sales: [{
     id: "s-server", shop_id: "shop", client_ref: "r0", sold_by: "u", device_id: "d", sold_at: "2026-09-11T08:00:00Z",
-    status: "completed", total: "1500.00", note: null, created_at: "2026-09-11T08:00:00Z", updated_at: "2026-09-11T08:00:00Z",
+    status: "completed", total: "1500.00", note: null, customer_id: null, created_at: "2026-09-11T08:00:00Z", updated_at: "2026-09-11T08:00:00Z",
   }],
   dashboard: {
     today: { date: "2026-09-11", sales_count: 1, sales_total: 1500, units_sold: 1, gross_profit: 1000 },

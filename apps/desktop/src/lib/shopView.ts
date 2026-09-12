@@ -1,4 +1,4 @@
-import type { BarcodeRow, BatchRow, ItemRow, PurchaseRow, SaleRow } from "@zogal/shared";
+import type { BarcodeRow, BatchRow, CustomerRow, ItemRow, PurchaseRow, SaleRow } from "@zogal/shared";
 import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { toKobo } from "@zogal/shared";
 import { allocateFifo, applyAllocation, cogs, type OpenBatch, type ShopDashboard } from "@zogal/inventory-batches";
@@ -30,6 +30,8 @@ export interface ShopSnapshot {
   tax: TaxSnapshot | null;
   /** Expenses (PRD §6.4). Only with expenses.view / expenses.create. */
   expenses: ExpenseRow[];
+  /** The shop's customers (0012) — so the till can attach one offline. */
+  customers: CustomerRow[];
 }
 
 export interface TaxSnapshot {
@@ -49,6 +51,8 @@ export type ViewSale = SaleRow & {
   pending: boolean;
   /** Line detail is only known locally for pending sales. */
   lines?: { item_id: string; quantity: number; unit_price: string }[];
+  /** Customer name for a pending sale (existing or added offline). */
+  customer_name?: string | null;
 };
 
 export interface ShopView {
@@ -70,14 +74,20 @@ export interface ShopView {
   pendingProfit: number | null;
   tax: TaxSnapshot | null;
   expenses: ExpenseRow[];
+  /** Server list plus customers added offline (from pending sales), deduped. */
+  customers: CustomerRow[];
 }
+
+/** SYNC: what an offline sale carries. `customer` is resolved server-side on replay (0012). */
+export type OfflineCustomerRef = { id: string; name: string } | { name: string; phone: string | null };
 
 export interface OfflineSalePayload {
   lines: { item_id: string; quantity: number; unit_price: string; floor_price_at_sale: string }[];
   note: string | null;
+  customer?: OfflineCustomerRef | null;
 }
 
-export const EMPTY_SNAPSHOT: ShopSnapshot = { items: [], barcodes: [], stock: {}, stockValue: {}, batches: [], purchases: [], sales: [], dashboard: null, devices: [], tax: null, expenses: [] };
+export const EMPTY_SNAPSHOT: ShopSnapshot = { items: [], barcodes: [], stock: {}, stockValue: {}, batches: [], purchases: [], sales: [], dashboard: null, devices: [], tax: null, expenses: [], customers: [] };
 
 /**
  * Apply unsent sales to the server's view. Pure; the calculation the till
@@ -90,7 +100,7 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
       purchases: snap.purchases, devices: snap.devices,
       sales: snap.sales.map((s) => ({ ...s, pending: false })),
       dashboard: snap.dashboard, pendingSales: 0, pendingTurnover: 0, pendingProfit: viewCost ? 0 : null,
-      tax: snap.tax, expenses: snap.expenses,
+      tax: snap.tax, expenses: snap.expenses, customers: snap.customers ?? [],
     };
   }
 
@@ -108,12 +118,28 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
         id: e.clientRef, shop_id: e.shopId, client_ref: e.clientRef, sold_by: e.userId,
         device_id: e.deviceId, sold_at: e.occurredAt, status: "completed" as const,
         total: (total / 100).toFixed(2), note: e.payload.note,
+        customer_id: e.payload.customer && "id" in e.payload.customer ? e.payload.customer.id : null,
         created_at: e.occurredAt, updated_at: e.occurredAt,
         pending: true, lines: e.payload.lines,
+        customer_name: e.payload.customer?.name ?? null,
       };
     })
     .sort((a, b) => b.sold_at.localeCompare(a.sold_at));
   const sales: ViewSale[] = [...pendingSales, ...snap.sales.map((s) => ({ ...s, pending: false }))];
+
+  // Customers added offline show in the picker straight away (by phone,
+  // else by name), so the same regular isn't typed twice in one outage.
+  const customers: CustomerRow[] = [...(snap.customers ?? [])];
+  for (const e of overlay) {
+    const c = e.payload.customer;
+    if (!c || "id" in c) continue;
+    const dup = customers.some((x) => (c.phone && x.phone === c.phone) || x.name.toLowerCase() === c.name.toLowerCase());
+    if (dup) continue;
+    customers.push({
+      id: `pending:${e.clientRef}`, shop_id: e.shopId, name: c.name, phone: c.phone, note: null,
+      is_active: true, created_by: e.userId, created_at: e.occurredAt, updated_at: e.occurredAt,
+    });
+  }
 
   // All unsent sales' takings, and profit via local FIFO — feeds the live
   // tax figure (they belong to the current month/year in practice).
@@ -193,7 +219,7 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
     items: snap.items, barcodes: snap.barcodes, stock, batches: snap.batches,
     purchases: snap.purchases, devices: snap.devices,
     sales, dashboard, pendingSales: overlay.length, pendingTurnover, pendingProfit,
-    tax: snap.tax, expenses: snap.expenses,
+    tax: snap.tax, expenses: snap.expenses, customers,
   };
 }
 

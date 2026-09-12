@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { BatchRow, PurchaseRow } from "@zogal/shared";
 import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { toKobo, type Kobo } from "@zogal/shared";
-import { fetchShopDashboard, listBarcodes, stockChannel } from "@zogal/inventory-batches";
+import { fetchShopDashboard, listBarcodes, listCustomers, stockChannel } from "@zogal/inventory-batches";
 import { cacheKey, getCache, pending, putCache, type OutboxEntry } from "@zogal/sync";
 import { listExpenses, loadFiledPeriods, loadLedgerSummary, loadTaxProfile, loadTaxReference, monthWindow, yearWindow } from "@zogal/tax-engine";
 import { composeView, EMPTY_SNAPSHOT as EMPTY, type OfflineSalePayload, type ShopSnapshot, type ShopView } from "@/lib/shopView";
@@ -92,7 +92,7 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
     setRefreshing(true);
     try {
       const db = getSupabase();
-      const [items, barcodes, stockMap, sales, dashboard, stockRows, batches, purchases, devices, tax, expenses] = await Promise.all([
+      const [items, barcodes, stockMap, sales, dashboard, stockRows, batches, purchases, devices, tax, expenses, customers] = await Promise.all([
         inventory.listItems(shopId),
         listBarcodes(db, shopId),
         inventory.stockQuantities(shopId),
@@ -110,12 +110,14 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
         auth.listDevices(shopId).catch(() => [] as DeviceStatusRow[]),
         viewTax ? loadTaxSlice(db, shopId).catch(() => null) : Promise.resolve(null),
         viewExpenses ? listExpenses(db, shopId).catch(() => []) : Promise.resolve([]),
+        // Until 0012 is applied the table doesn't exist — treat as "no customers".
+        listCustomers(db, shopId).catch(() => []),
       ]);
       const next: ShopSnapshot = {
         items, barcodes,
         stock: Object.fromEntries(stockMap),
         stockValue: Object.fromEntries(stockRows.map((r) => [r.item_id, toKobo(r.stock_value)])),
-        batches, purchases, sales, dashboard, devices, tax, expenses,
+        batches, purchases, sales, dashboard, devices, tax, expenses, customers,
       };
       setSnapshot(next);
       await putCache(key, next);
