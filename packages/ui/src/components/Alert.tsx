@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { IconAlertTriangle, IconCircleCheck, IconInfoCircle, IconXboxX } from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/utils.js";
 
 /**
  * Inline, persistent message — for state that must stay visible (unlike a

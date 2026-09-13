@@ -2,11 +2,10 @@ import { useMemo } from "react";
 import { IconReceiptTax } from "@tabler/icons-react";
 import { formatNaira, type Kobo } from "@zogal/shared";
 import { computeObligations } from "@zogal/tax-engine";
-import { Badge } from "@/components/ui/badge";
+import { Badge, cn } from "@zogal/ui";
 import { useShopData } from "@/lib/shopData";
 import { useSync } from "@/lib/sync";
 import type { PageKey } from "@/lib/nav";
-import { cn } from "@/lib/utils";
 
 /**
  * The ambient tax widget (TRD §8): always on the dashboard, no button,

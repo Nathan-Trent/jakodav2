@@ -7,16 +7,11 @@ import { PageHeader } from "@/components/AppShell";
 import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { TaxWidget } from "@/components/TaxWidget";
-import { PeriodPicker } from "@/components/PeriodPicker";
-import { describeRange, resolvePreset, type PeriodRange } from "@/lib/periods";
+import { PeriodPicker, describeRange, resolvePreset, type PeriodRange, Badge, Button, Card, CardContent, cn } from "@zogal/ui";
 import { getSupabase } from "@/lib/supabase";
 import { useShopData } from "@/lib/shopData";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useSession } from "@/lib/session";
 import type { PageKey } from "@/lib/nav";
-import { cn } from "@/lib/utils";
 
 const money = (v: string | number | null | undefined): Kobo => toKobo(v == null ? 0 : typeof v === "number" ? v : v);
 

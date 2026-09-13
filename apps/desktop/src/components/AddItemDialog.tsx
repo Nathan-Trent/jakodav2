@@ -1,12 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { fromKobo, toKobo } from "@zogal/shared";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { NumberField } from "@/components/ui/number-field";
-import { Label } from "@/components/ui/label";
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, NumberField, Label, notifyError } from "@zogal/ui";
 import { useSession } from "@/lib/session";
-import { notifyError } from "@/lib/feedback";
 
 /** Add item + initial stock. Cost is only asked for if the user may record purchases. */
 export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (name: string) => Promise<void> }) {

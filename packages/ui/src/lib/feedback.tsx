@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { friendlyError } from "@/lib/errors";
+import { friendlyError } from "./errors.js";
 
 /**
  * One place for feedback so every screen behaves the same (Nielsen #4

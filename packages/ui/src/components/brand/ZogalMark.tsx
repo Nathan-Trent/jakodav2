@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils.js";
 
 /**
  * The Zogal mark — the ribbon Z. Copied into this project (public/brand) so

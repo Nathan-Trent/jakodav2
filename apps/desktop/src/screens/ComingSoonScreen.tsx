@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/AppShell";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, Badge } from "@zogal/ui";
 import type { NavItem } from "@/lib/nav";
 
 /** Honest placeholder for a planned section — says what and when. */

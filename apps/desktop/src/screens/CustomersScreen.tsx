@@ -3,17 +3,8 @@ import { IconArrowLeft, IconPencil, IconPlus, IconSearch, IconUserOff } from "@t
 import type { CustomerRow } from "@zogal/shared";
 import { createCustomer, normalisePhone, updateCustomer } from "@zogal/inventory-batches";
 import { PageHeader } from "@/components/AppShell";
-import { Alert } from "@/components/Alert";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Alert, ConfirmDialog, Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess } from "@zogal/ui";
 import { StaleNotice } from "@/components/StaleNotice";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { notifyError, notifySuccess } from "@/lib/feedback";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import { getSupabase } from "@/lib/supabase";

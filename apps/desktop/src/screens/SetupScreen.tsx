@@ -1,11 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { AuthFrame } from "@/components/AuthFrame";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
 import { useSession } from "@/lib/session";
-import { notifyError, notifySuccess } from "@/lib/feedback";
 import { defaultDeviceName } from "@/lib/device";
 
 /**

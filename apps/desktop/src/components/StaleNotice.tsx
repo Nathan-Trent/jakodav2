@@ -1,7 +1,7 @@
 import { IconRefresh } from "@tabler/icons-react";
 import { asOf, useShopData } from "@/lib/shopData";
 import { useSync } from "@/lib/sync";
-import { cn } from "@/lib/utils";
+import { cn } from "@zogal/ui";
 
 /**
  * "Showing what this terminal last downloaded."

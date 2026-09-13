@@ -1,6 +1,6 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
-import { formatNumberAtRest as format, formatNumberLive as formatLive, sanitizeNumber as sanitize } from "@/lib/numberFormat";
+import { cn } from "../../lib/utils.js";
+import { formatNumberAtRest as format, formatNumberLive as formatLive, sanitizeNumber as sanitize } from "../../lib/numberFormat.js";
 
 /**
  * A number box that behaves like a person expects.

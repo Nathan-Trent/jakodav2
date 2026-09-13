@@ -6,17 +6,10 @@ import { cacheKey, readThrough } from "@zogal/sync";
 import { PageHeader } from "@/components/AppShell";
 import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
-import { PeriodPicker } from "@/components/PeriodPicker";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { describeRange, resolvePreset, type PeriodRange } from "@/lib/periods";
+import { PeriodPicker, Badge, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, describeRange, resolvePreset, type PeriodRange, cn } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import { getSupabase } from "@/lib/supabase";
-import { cn } from "@/lib/utils";
 
 /** One sale as this screen shows it — server or still on this terminal. */
 export interface SaleView {

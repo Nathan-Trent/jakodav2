@@ -2,14 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { IconAlertTriangle, IconCheck, IconRefresh } from "@tabler/icons-react";
 import { listConflicts, resolveConflict, type SyncConflictRow } from "@zogal/sync";
 import { PageHeader } from "@/components/AppShell";
-import { Alert } from "@/components/Alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { notifyError, notifySuccess } from "@/lib/feedback";
+import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 

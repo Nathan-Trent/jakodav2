@@ -6,21 +6,13 @@ import {
   type BusinessCategory, type PeriodStatus, type TaxObligation,
 } from "@zogal/tax-engine";
 import { PageHeader } from "@/components/AppShell";
-import { Alert } from "@/components/Alert";
+import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, notifyError, notifySuccess, cn } from "@zogal/ui";
 import { StaleNotice } from "@/components/StaleNotice";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { notifyError, notifySuccess } from "@/lib/feedback";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import { useSync } from "@/lib/sync";
 import { getSupabase } from "@/lib/supabase";
 import { useOnline } from "@/lib/useOnline";
-import { cn } from "@/lib/utils";
 
 const naira = (n: number) => formatNaira(Math.round(n * 100) as Kobo);
 const today = () => new Date().toISOString().slice(0, 10);

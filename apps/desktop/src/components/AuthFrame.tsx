@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import { LeafField } from "@/components/brand/LeafField";
-import { ZogalMark } from "@/components/brand/ZogalMark";
+import { LeafField, ZogalMark } from "@zogal/ui";
 
 /**
  * Frame for pre-shell screens (login, setup). Forest brand panel on the

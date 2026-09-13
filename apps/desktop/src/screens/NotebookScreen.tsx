@@ -3,23 +3,12 @@ import { IconCamera, IconPhoto, IconTrash } from "@tabler/icons-react";
 import { formatNaira, fromKobo, toKobo, type Kobo } from "@zogal/shared";
 import { announceStockChange, closeScan, fetchScanQuota, parseNotebookPage, ScanError, stockChannel, type ParsedPage, type ScanQuota } from "@zogal/inventory-batches";
 import { PageHeader } from "@/components/AppShell";
-import { Alert } from "@/components/Alert";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { LoadingMark } from "@/components/brand/LoadingMark";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { NumberField } from "@/components/ui/number-field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { notifyError, notifySuccess } from "@/lib/feedback";
+import { Alert, ConfirmDialog, LoadingMark, Badge, Button, Card, CardContent, Input, Label, NumberField, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess, cn } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import { useSync } from "@/lib/sync";
 import { getSupabase } from "@/lib/supabase";
 import { useOnline } from "@/lib/useOnline";
-import { cn } from "@/lib/utils";
 
 interface DraftRow {
   key: number;

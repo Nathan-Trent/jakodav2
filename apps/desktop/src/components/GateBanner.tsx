@@ -1,7 +1,5 @@
 import { IconLock, IconRefresh } from "@tabler/icons-react";
-import { Alert } from "@/components/Alert";
-import { Button } from "@/components/ui/button";
-import { LoadingMark } from "@/components/brand/LoadingMark";
+import { Alert, Button, LoadingMark } from "@zogal/ui";
 import { useSync } from "@/lib/sync";
 
 /**

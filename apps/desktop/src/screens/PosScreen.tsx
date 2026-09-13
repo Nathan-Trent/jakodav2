@@ -7,21 +7,14 @@ import { enqueue } from "@zogal/sync";
 import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { CustomerPicker } from "@/components/CustomerPicker";
-import { Alert } from "@/components/Alert";
+import { Alert, Button, Card, CardContent, NumberField, Label, Separator, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
 import { StaleNotice } from "@/components/StaleNotice";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { NumberField } from "@/components/ui/number-field";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { notifyError, notifyInfo, notifySuccess } from "@/lib/feedback";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import type { OfflineCustomerRef } from "@/lib/shopView";
 import { useSync } from "@/lib/sync";
 import { getSupabase } from "@/lib/supabase";
 import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
-import { cn } from "@/lib/utils";
 
 interface CartLine {
   item: ItemRow;

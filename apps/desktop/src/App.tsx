@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster, LoadingMark } from "@zogal/ui";
 import { AppShell } from "@/components/AppShell";
 import { SessionProvider, useSession } from "@/lib/session";
 import { SyncProvider, useSync } from "@/lib/sync";
@@ -20,7 +20,6 @@ import { TaxScreen } from "@/screens/TaxScreen";
 import { ComingSoonScreen } from "@/screens/ComingSoonScreen";
 import { ConflictsScreen } from "@/screens/ConflictsScreen";
 import { GateBanner, LockedScreen } from "@/components/GateBanner";
-import { LoadingMark } from "@/components/brand/LoadingMark";
 
 export function App() {
   return (

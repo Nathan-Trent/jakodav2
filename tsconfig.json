@@ -1,11 +1,26 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/shared" },
-    { "path": "packages/auth-permissions" },
-    { "path": "packages/inventory-batches" },
-    { "path": "packages/sync" },
-    { "path": "packages/tax-engine" },
-    { "path": "apps/desktop" }
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "packages/auth-permissions"
+    },
+    {
+      "path": "packages/inventory-batches"
+    },
+    {
+      "path": "packages/sync"
+    },
+    {
+      "path": "packages/tax-engine"
+    },
+    {
+      "path": "packages/ui"
+    },
+    {
+      "path": "apps/desktop"
+    }
   ]
 }

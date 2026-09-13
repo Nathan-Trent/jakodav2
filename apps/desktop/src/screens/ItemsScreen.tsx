@@ -8,14 +8,8 @@ import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { ItemDialog } from "@/components/ItemDialog";
 import { AddStockDialog } from "@/components/AddStockDialog";
-import { Alert } from "@/components/Alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, Badge, Button, Card, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifySuccess } from "@zogal/ui";
 import { useSession } from "@/lib/session";
-import { notifySuccess } from "@/lib/feedback";
 
 /** Catalogue + stock. Costs/values only with items.view_cost. */
 export function ItemsScreen() {

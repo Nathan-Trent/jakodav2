@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { IconCalendar } from "@tabler/icons-react";
-import { Input } from "@/components/ui/input";
-import { PERIOD_PRESETS, resolvePreset, type PeriodPreset, type PeriodRange } from "@/lib/periods";
+import { Input } from "./ui/input.js";
+import { PERIOD_PRESETS, resolvePreset, type PeriodPreset, type PeriodRange } from "../lib/periods.js";
 
 /**
  * "Which period?" — one control, used on every figures screen so the answer

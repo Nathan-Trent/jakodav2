@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { IconUser, IconUserPlus, IconX } from "@tabler/icons-react";
 import { normalisePhone } from "@zogal/inventory-batches";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, cn } from "@zogal/ui";
 import { useShopData } from "@/lib/shopData";
 import type { OfflineCustomerRef } from "@/lib/shopView";
-import { cn } from "@/lib/utils";
 
 /**
  * "Who is this sale for?" — optional, one tap, never in the way of selling.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { ZogalMark } from "@/components/brand/ZogalMark";
-import { cn } from "@/lib/utils";
+import { ZogalMark } from "./ZogalMark.js";
+import { cn } from "../../lib/utils.js";
 
 /**
  * The app's one loading state — the breathing mark, matching zogal.app.

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { IconAlertTriangle } from "@tabler/icons-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "./ui/button.js";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog.js";
 
 /**
  * Replaces window.confirm(). Says what will happen, names the action on the

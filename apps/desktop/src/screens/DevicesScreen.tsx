@@ -2,14 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { IconRefresh } from "@tabler/icons-react";
 import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { PageHeader } from "@/components/AppShell";
-import { Alert } from "@/components/Alert";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, ConfirmDialog, Badge, Button, Card, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess } from "@zogal/ui";
 import { useSession } from "@/lib/session";
-import { notifyError, notifySuccess } from "@/lib/feedback";
 
 /** Owner view of activated terminals (TRD §1 device status). */
 export function DevicesScreen() {

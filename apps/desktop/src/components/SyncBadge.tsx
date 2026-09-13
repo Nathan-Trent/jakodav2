@@ -1,6 +1,6 @@
 import { IconAlertTriangle, IconCloudCheck, IconCloudUpload, IconLock, IconRefresh, IconWifiOff } from "@tabler/icons-react";
 import { useSync } from "@/lib/sync";
-import { cn } from "@/lib/utils";
+import { cn } from "@zogal/ui";
 
 /**
  * SYNC status, always visible in the sidebar (Nielsen #1).

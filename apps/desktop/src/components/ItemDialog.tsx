@@ -3,16 +3,7 @@ import { IconBarcode, IconPrinter, IconSparkles, IconTrash } from "@tabler/icons
 import type { BarcodeRow, ItemRow } from "@zogal/shared";
 import { formatNaira, fromKobo, toKobo } from "@zogal/shared";
 import { addManufacturerBarcode, generateBarcode, isValidEan13, removeBarcode, setItemPrices } from "@zogal/inventory-batches";
-import { Alert } from "@/components/Alert";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { NumberField } from "@/components/ui/number-field";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { notifyError, notifySuccess } from "@/lib/feedback";
+import { Alert, ConfirmDialog, Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, NumberField, Label, Separator, notifyError, notifySuccess } from "@zogal/ui";
 import { printLabels, type LabelLayout } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { useOnline } from "@/lib/useOnline";

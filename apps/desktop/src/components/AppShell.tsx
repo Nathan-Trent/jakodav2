@@ -1,11 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLogout } from "@tabler/icons-react";
-import { Badge } from "@/components/ui/badge";
-import { ZogalLockup, ZogalMark } from "@/components/brand/ZogalMark";
+import { Badge, ZogalLockup, ZogalMark, cn } from "@zogal/ui";
 import { SyncBadge } from "@/components/SyncBadge";
 import { useSession } from "@/lib/session";
 import { visibleNav, type PageKey } from "@/lib/nav";
-import { cn } from "@/lib/utils";
 
 const COLLAPSE_KEY = "zogal.sidebar.collapsed";
 

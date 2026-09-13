@@ -8,21 +8,10 @@ import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { useShopData } from "@/lib/shopData";
 import { CostCorrectionDialog } from "@/components/CostCorrectionDialog";
-import { Alert } from "@/components/Alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { NumberField } from "@/components/ui/number-field";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { notifyError, notifyInfo, notifySuccess } from "@/lib/feedback";
+import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, NumberField, Label, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
-import { cn } from "@/lib/utils";
 
 interface RestockLine {
   item: ItemRow;

@@ -3,17 +3,11 @@ import { IconArrowLeft, IconTruckDelivery } from "@tabler/icons-react";
 import type { ItemRow } from "@zogal/shared";
 import { formatNaira, fromKobo, toKobo, type Kobo } from "@zogal/shared";
 import { announceStockChange, setItemPrices, stockChannel } from "@zogal/inventory-batches";
-import { Alert } from "@/components/Alert";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { NumberField } from "@/components/ui/number-field";
-import { Label } from "@/components/ui/label";
-import { notifyError, notifySuccess } from "@/lib/feedback";
+import { Alert, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, NumberField, Label, notifyError, notifySuccess, cn } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import { getSupabase } from "@/lib/supabase";
 import { useOnline } from "@/lib/useOnline";
-import { cn } from "@/lib/utils";
 
 /**
  * "Add stock" — the everyday front door for restocking ONE item.
