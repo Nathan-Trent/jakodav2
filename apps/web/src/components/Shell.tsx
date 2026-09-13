@@ -1,39 +1,30 @@
 import { useState, type ReactNode } from "react";
 import type { Icon } from "@tabler/icons-react";
-import { IconLogout, IconMenu2, IconX } from "@tabler/icons-react";
+import { IconExternalLink, IconLogout, IconMenu2, IconX } from "@tabler/icons-react";
 import { Badge, ZogalLockup, ZogalMark, cn } from "@zogal/ui";
 import { useSession } from "@/lib/session";
-import { visibleNav, type PageKey } from "@/lib/nav";
+import type { NavItem } from "@/lib/nav";
 
 /**
- * Dashboard frame — the desktop shell's sibling, made for a phone as much as
- * a laptop (TRD: V2 mobile is this dashboard made mobile-friendly). Forest
- * sidebar on wide screens; a top bar with a drawer below 900px. Shop
- * switcher for owners of more than one shop. Back-office section appears
- * only for platform admins.
+ * Dashboard frame — made for a phone as much as a laptop (TRD: V2 mobile is
+ * this dashboard made mobile-friendly). Forest sidebar on wide screens; a
+ * top bar with a drawer below. The same frame serves the shop dashboard and
+ * the Zogal back office with different menus — never both at once.
  */
-export function Shell({ page, onNavigate, children }: { page: PageKey; onNavigate: (p: PageKey) => void; children: ReactNode }) {
+export function Shell<K extends string>({ items, page, onNavigate, variant, children }: {
+  items: NavItem<K>[]; page: K; onNavigate: (p: K) => void; variant: "shop" | "admin"; children: ReactNode;
+}) {
   const { ctx, active, admin, setActiveShop, signOut } = useSession();
   const [open, setOpen] = useState(false);
-  const nav = visibleNav(active?.permissions ?? [], admin);
-  const shopNav = nav.filter((n) => n.section === "shop");
-  const adminNav = nav.filter((n) => n.section === "admin");
+  const sub = variant === "admin" ? "Back office" : "Business";
 
   const menu = (
     <>
       <nav className="grid gap-0.5 px-3">
-        {shopNav.map((n) => <NavButton key={n.key} active={n.key === page} icon={n.icon} label={n.label} onClick={() => { onNavigate(n.key); setOpen(false); }} />)}
+        {items.map((n) => <NavButton key={n.key} active={n.key === page} icon={n.icon} label={n.label} onClick={() => { onNavigate(n.key); setOpen(false); }} />)}
       </nav>
-      {adminNav.length > 0 && (
-        <>
-          <div className="px-6 pt-5 pb-1 text-micro text-sidebar-muted/80 uppercase tracking-wider">Zogal back office</div>
-          <nav className="grid gap-0.5 px-3">
-            {adminNav.map((n) => <NavButton key={n.key} active={n.key === page} icon={n.icon} label={n.label} onClick={() => { onNavigate(n.key); setOpen(false); }} />)}
-          </nav>
-        </>
-      )}
       <div className="mt-auto border-t border-white/10 px-5 py-4 grid gap-3">
-        {ctx && ctx.memberships.length > 1 ? (
+        {variant === "shop" && (ctx && ctx.memberships.length > 1 ? (
           <label className="grid gap-1">
             <span className="text-micro text-sidebar-muted">Shop</span>
             <select className="h-9 rounded-md bg-white/10 px-2 text-sm text-sidebar-foreground" value={active?.shop.id ?? ""} onChange={(e) => setActiveShop(e.target.value)}>
@@ -42,11 +33,20 @@ export function Shell({ page, onNavigate, children }: { page: PageKey; onNavigat
           </label>
         ) : (
           <div className="text-small font-semibold truncate">{active?.shop.name ?? "No shop"}</div>
+        ))}
+        {variant === "shop" && admin && (
+          <a href="/admin" className="text-caption text-sidebar-muted hover:text-sidebar-foreground inline-flex items-center gap-1">Zogal back office <IconExternalLink size={12} /></a>
+        )}
+        {variant === "admin" && active && (
+          <a href="/" className="text-caption text-sidebar-muted hover:text-sidebar-foreground inline-flex items-center gap-1">My shop dashboard <IconExternalLink size={12} /></a>
         )}
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="text-small truncate">{ctx?.user?.full_name}</div>
-            <div className="flex gap-1 mt-0.5">{active && <Badge variant="outline" className="border-white/20 text-sidebar-muted">{active.role.name}</Badge>}{admin && <Badge variant="outline" className="border-white/20 text-sidebar-active">Admin</Badge>}</div>
+            <div className="flex gap-1 mt-0.5">
+              {variant === "shop" && active && <Badge variant="outline" className="border-white/20 text-sidebar-muted">{active.role.name}</Badge>}
+              {variant === "admin" && <Badge variant="outline" className="border-white/20 text-sidebar-active">Platform admin</Badge>}
+            </div>
           </div>
           <button className="text-sidebar-muted hover:text-sidebar-foreground" title="Sign out" onClick={() => void signOut()}><IconLogout size={18} /></button>
         </div>
@@ -56,16 +56,13 @@ export function Shell({ page, onNavigate, children }: { page: PageKey; onNavigat
 
   return (
     <div className="min-h-full md:grid md:grid-cols-[232px_minmax(0,1fr)]">
-      {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-20 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 h-14">
-        <ZogalLockup size={28} sub="ERP" />
+        <ZogalLockup size={28} sub={sub} />
         <button aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen((o) => !o)}>{open ? <IconX size={22} /> : <IconMenu2 size={22} />}</button>
       </header>
-      {open && (
-        <div className="md:hidden fixed inset-0 top-14 z-10 bg-sidebar text-sidebar-foreground flex flex-col pt-3 overflow-y-auto">{menu}</div>
-      )}
+      {open && <div className="md:hidden fixed inset-0 top-14 z-10 bg-sidebar text-sidebar-foreground flex flex-col pt-3 overflow-y-auto">{menu}</div>}
       <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col sticky top-0 h-screen overflow-y-auto">
-        <div className="flex items-center px-5 pt-5 pb-4"><ZogalLockup size={32} sub="ERP" /></div>
+        <div className="flex items-center px-5 pt-5 pb-4"><ZogalLockup size={32} sub={sub} /></div>
         {menu}
       </aside>
       <main className="min-w-0 bg-background">{children}</main>

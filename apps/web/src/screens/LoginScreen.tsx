@@ -3,7 +3,7 @@ import { AuthFrame } from "@/components/AuthFrame";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 
-export function LoginScreen() {
+export function LoginScreen({ variant = "shop" }: { variant?: "shop" | "admin" } = {}) {
   const { auth } = useSession();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -31,11 +31,11 @@ export function LoginScreen() {
   }
 
   return (
-    <AuthFrame>
+    <AuthFrame sub={variant === "admin" ? "Back office" : "Business"}>
       <Card className="w-full max-w-sm elev-3">
         <CardHeader>
-          <CardTitle className="text-heading">Welcome back</CardTitle>
-          <CardDescription>{mode === "signin" ? "Sign in to your shop" : "Create your account"}</CardDescription>
+          <CardTitle className="text-heading">{variant === "admin" ? "Zogal back office" : "Welcome back"}</CardTitle>
+          <CardDescription>{variant === "admin" ? "Platform admins only" : mode === "signin" ? "Sign in to your shop" : "Create your account"}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="grid gap-4">
@@ -56,9 +56,9 @@ export function LoginScreen() {
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
             </Button>
-            <Button type="button" variant="link" className="text-muted-foreground" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>
+            {variant === "shop" && <Button type="button" variant="link" className="text-muted-foreground" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>
               {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
-            </Button>
+            </Button>}
           </form>
         </CardContent>
       </Card>

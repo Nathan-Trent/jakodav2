@@ -477,6 +477,31 @@ change via SQL (comment at the top of 0013). Seeded: `notebook.enabled`,
   will open the camera on a phone/tablet browser when the web build exists.
 - No feedback loop from corrections back to the prompt yet.
 
+## Infrastructure (Nathan, 2026-09-13) — updater, URLs, partner build
+Status: BUILT. Waiting on Nathan: updater keypair + GitHub secrets;
+second Vercel project for the partner POS; subdomains.
+
+- **Desktop auto-updater**: `tauri-plugin-updater` + `plugin-process`;
+  checks `github.com/Nathan-Trent/jakodav2/releases/latest/download/latest.json`
+  on launch + every 6 h; signature-verified; `UpdateBanner` lets the cashier
+  choose when to restart. Inert in a browser build. Public key in
+  `tauri.conf.json` is a PLACEHOLDER until Nathan runs the keygen
+  (docs/RELEASING.md). Version bumped to 0.2.0.
+- **Release pipeline**: `.github/workflows/release-desktop.yml` — push tag
+  `v*` → Windows NSIS build on GitHub, signed, published as a Release with
+  updater JSON. Supabase URL/anon key + subscription public key come from
+  GitHub secrets, baked at build; nothing reads Nathan's machine. `ci.yml`
+  runs types/lint/tests on every push.
+- **URLs**: `/` shop dashboard; `/admin` is now its OWN entry (own login
+  "Zogal back office", own menu, refuses non-admins) — the back office no
+  longer appears inside the shop dashboard; an admin gets a small link each
+  way. Partner POS = the desktop app as a website: `npm run pos:build` →
+  `apps/desktop/dist`, second Vercel project (docs/RELEASING.md).
+- Terminals: default name "Front counter" (was "Terminal (Win32)"), rename
+  from the dashboard, stale "stage 5" text gone.
+- Naming: brand lockup now says "Zogal Business" / "Zogal Back office";
+  product name still to be decided by Nathan (Zogal Shop recommended).
+
 ## Scheduled: temporary partner web build (Nathan, 2026-09-12)
 At the END of the build sequence: host the same app as a web build (it is a
 Vite app inside Tauri already) so a partner can sign up and test without
@@ -603,6 +628,10 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   dashboard + Zogal back office; 0014 handed to Nathan. Vite SPA instead of
   Next.js (Nathan's decision, TRD §2 corrected). Next: apply 0014, deploy
   to Vercel, Nathan clicks through; then Stage 9.
+- **2026-09-13** — 0014 applied, dashboard deployed on Vercel. Built the
+  desktop auto-updater + GitHub release pipeline, split `/admin` into its
+  own entry, `pos:build` for the partner web build. Nathan to: generate
+  updater keys, add GitHub secrets, create the POS Vercel project.
 - **2026-09-11** — Nathan's offline test: selling worked but nothing else
   reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
   per-user attribution on shared terminals (0009, approved). 43 tests.

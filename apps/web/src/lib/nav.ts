@@ -1,37 +1,50 @@
 import type { Permission } from "@zogal/auth-permissions";
 import {
-  IconAlertTriangle, IconBuildingStore, IconChartBar, IconCreditCard, IconDeviceDesktop,
-  IconLayoutDashboard, IconReceiptTax, IconSettings, IconAdjustments, IconUsers, type Icon,
+  IconAdjustments, IconAlertTriangle, IconBuildingStore, IconChartBar, IconCreditCard, IconDeviceDesktop,
+  IconLayoutDashboard, IconReceiptTax, IconSettings, IconUsers, type Icon,
 } from "@tabler/icons-react";
 
-export type PageKey =
-  | "overview" | "reports" | "staff" | "devices" | "tax" | "conflicts" | "subscription" | "settings"
-  | "admin_shops" | "admin_platform" | "admin_ops";
+/**
+ * Two separate products on one deployment (Nathan, 2026-09-13):
+ *   /            the shop owner's dashboard
+ *   /admin/...   the Zogal back office — its own entry, its own menu,
+ *                nothing shop-specific, platform admins only.
+ */
+export type ShopPage = "overview" | "reports" | "staff" | "devices" | "tax" | "conflicts" | "subscription" | "settings";
+export type AdminPage = "shops" | "platform" | "ops";
 
-export interface NavItem { key: PageKey; label: string; icon: Icon; anyOf?: Permission[]; section: "shop" | "admin" }
+export interface NavItem<K extends string> { key: K; label: string; icon: Icon; anyOf?: Permission[] }
 
-/** The control tower's map. Owner sections are permission-gated; admin ones only show to platform admins. */
-export const NAV: NavItem[] = [
-  { key: "overview", label: "Overview", icon: IconLayoutDashboard, section: "shop" },
-  { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"], section: "shop" },
-  { key: "staff", label: "Staff", icon: IconUsers, anyOf: ["users.manage"], section: "shop" },
-  { key: "devices", label: "Terminals", icon: IconDeviceDesktop, anyOf: ["shop.settings"], section: "shop" },
-  { key: "tax", label: "Tax", icon: IconReceiptTax, anyOf: ["tax.view"], section: "shop" },
-  { key: "conflicts", label: "Sync issues", icon: IconAlertTriangle, anyOf: ["reports.view"], section: "shop" },
-  { key: "subscription", label: "Subscription", icon: IconCreditCard, anyOf: ["shop.settings"], section: "shop" },
-  { key: "settings", label: "Settings", icon: IconSettings, anyOf: ["shop.settings"], section: "shop" },
-  { key: "admin_shops", label: "Shops", icon: IconBuildingStore, section: "admin" },
-  { key: "admin_platform", label: "Platform settings", icon: IconAdjustments, section: "admin" },
-  { key: "admin_ops", label: "Operational settings", icon: IconSettings, section: "admin" },
+export const SHOP_NAV: NavItem<ShopPage>[] = [
+  { key: "overview", label: "Overview", icon: IconLayoutDashboard },
+  { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"] },
+  { key: "staff", label: "Staff", icon: IconUsers, anyOf: ["users.manage"] },
+  { key: "devices", label: "Terminals", icon: IconDeviceDesktop, anyOf: ["shop.settings"] },
+  { key: "tax", label: "Tax", icon: IconReceiptTax, anyOf: ["tax.view"] },
+  { key: "conflicts", label: "Sync issues", icon: IconAlertTriangle, anyOf: ["reports.view"] },
+  { key: "subscription", label: "Subscription", icon: IconCreditCard, anyOf: ["shop.settings"] },
+  { key: "settings", label: "Settings", icon: IconSettings, anyOf: ["shop.settings"] },
 ];
 
-export function visibleNav(perms: readonly Permission[], admin: boolean): NavItem[] {
-  return NAV.filter((n) => (n.section === "admin" ? admin : !n.anyOf || n.anyOf.some((p) => perms.includes(p))));
+export const ADMIN_NAV: NavItem<AdminPage>[] = [
+  { key: "shops", label: "Shops", icon: IconBuildingStore },
+  { key: "platform", label: "Platform settings", icon: IconAdjustments },
+  { key: "ops", label: "Operational settings", icon: IconSettings },
+];
+
+export function visibleShopNav(perms: readonly Permission[]): NavItem<ShopPage>[] {
+  return SHOP_NAV.filter((n) => !n.anyOf || n.anyOf.some((p) => perms.includes(p)));
 }
 
-/** Path ↔ page, so the browser back button and bookmarks work. */
-export function pageFromPath(path: string): PageKey {
-  const k = path.replace(/^\//, "").replace(/\//g, "_") as PageKey;
-  return NAV.some((n) => n.key === k) ? k : "overview";
+export const isAdminPath = (path: string): boolean => path === "/admin" || path.startsWith("/admin/");
+
+export function shopPageFromPath(path: string): ShopPage {
+  const k = path.replace(/^\//, "") as ShopPage;
+  return SHOP_NAV.some((n) => n.key === k) ? k : "overview";
 }
-export function pathFor(page: PageKey): string { return "/" + page.replace(/_/g, "/"); }
+export function adminPageFromPath(path: string): AdminPage {
+  const k = path.replace(/^\/admin\/?/, "") as AdminPage;
+  return ADMIN_NAV.some((n) => n.key === k) ? k : "shops";
+}
+export const shopPath = (p: ShopPage): string => (p === "overview" ? "/" : `/${p}`);
+export const adminPath = (p: AdminPage): string => `/admin/${p}`;

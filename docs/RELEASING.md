@@ -35,3 +35,15 @@ Installed copies update themselves. Nothing is built on a developer machine.
    (or on next launch) and offer "Update and restart".
 
 First install on a new machine: download the `.exe` from the latest Release.
+
+# Web deployments (Vercel)
+
+Two projects, one repo, both with Root Directory left EMPTY:
+
+| Project | Build command | Output directory | Serves |
+|---|---|---|---|
+| shop dashboard (existing) | (from `vercel.json`: `npm run web:build`) | `apps/web/dist` | `/` owner dashboard, `/admin` Zogal back office |
+| partner POS (temporary) | `npm run pos:build` — set in the project's Build settings, overriding vercel.json | `apps/desktop/dist` | the full desktop till as a website |
+
+Both need env vars `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; the POS project also `VITE_SUBSCRIPTION_PUBLIC_KEY`.
+The POS project is deleted when the partner trial ends — nothing else depends on it.

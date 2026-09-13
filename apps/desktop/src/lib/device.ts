@@ -42,7 +42,7 @@ export function clearDevice(): void {
 }
 
 /** Best-effort human name for this terminal, editable at activation. */
+/** A name the owner will recognise on the dashboard — not the OS name. Editable on the setup screen and from the dashboard. */
 export function defaultDeviceName(): string {
-  const host = typeof navigator !== "undefined" ? navigator.platform : "";
-  return `Terminal (${host || "desktop"})`;
+  return "Front counter";
 }

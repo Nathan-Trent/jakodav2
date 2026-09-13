@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { IconPlus, IconRefresh } from "@tabler/icons-react";
 import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { PageHeader } from "@/components/Shell";
-import { Alert, ConfirmDialog, Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess } from "@zogal/ui";
+import { Alert, ConfirmDialog, Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess } from "@zogal/ui";
 import { useSession } from "@/lib/session";
+import { getSupabase } from "@/lib/supabase";
 
 /** Owner view of activated terminals (TRD §1 device status). */
 export function DevicesScreen() {
@@ -12,6 +13,19 @@ export function DevicesScreen() {
   const [rows, setRows] = useState<DeviceStatusRow[]>([]);
   const [toRevoke, setToRevoke] = useState<DeviceStatusRow | null>(null);
   const [code, setCode] = useState<{ code: string; expires_at: string } | null>(null);
+
+  const [renaming, setRenaming] = useState<DeviceStatusRow | null>(null);
+  const [newName, setNewName] = useState("");
+  async function saveName() {
+    const name = newName.trim();
+    if (!renaming || !name) return;
+    try {
+      const { error } = await getSupabase().from("devices").update({ name }).eq("id", renaming.id);
+      if (error) throw error;
+      setRenaming(null);
+      await load();
+    } catch (e) { notifyError(e); }
+  }
 
   /** TRD §1: a short-lived one-time code, shown once, typed into the desktop on install. */
   async function newCode() {
@@ -56,10 +70,10 @@ export function DevicesScreen() {
                 {activeRows.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="pl-5 font-semibold">
-                      {r.name}
+                      <button className="text-left hover:underline" title="Rename" onClick={() => { setRenaming(r); setNewName(r.name); }}>{r.name}</button>
                     </TableCell>
                     <TableCell>{r.is_online ? <Badge variant="success">Online</Badge> : <Badge variant="secondary">Offline</Badge>}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.last_sync_at ? new Date(r.last_sync_at).toLocaleString() : "Never (sync arrives in stage 5)"}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.last_sync_at ? new Date(r.last_sync_at).toLocaleString() : "Never"}</TableCell>
                     <TableCell className="pr-5 text-right">
                       <Button variant="ghost" size="sm" onClick={() => setToRevoke(r)} className="text-destructive hover:text-destructive">Revoke</Button>
                     </TableCell>
@@ -85,6 +99,17 @@ export function DevicesScreen() {
         destructive
         onConfirm={() => toRevoke ? revoke(toRevoke) : undefined}
       />
+      {renaming && (
+        <Dialog open onOpenChange={(o) => !o && setRenaming(null)}>
+          <DialogContent>
+            <form onSubmit={(e) => { e.preventDefault(); void saveName(); }} className="grid gap-4">
+              <DialogHeader><DialogTitle>Name this terminal</DialogTitle><DialogDescription>Where it sits, so sales and stock can be told apart — "Front counter", "Back office".</DialogDescription></DialogHeader>
+              <Input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={80} />
+              <DialogFooter><Button type="button" variant="outline" onClick={() => setRenaming(null)}>Cancel</Button><Button type="submit" disabled={!newName.trim()}>Save</Button></DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
       {code && (
         <Dialog open onOpenChange={(o) => !o && setCode(null)}>
           <DialogContent>

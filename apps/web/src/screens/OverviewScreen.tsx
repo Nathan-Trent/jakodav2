@@ -8,12 +8,12 @@ import { PageHeader, Page } from "@/components/Shell";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 import { useAsync, money } from "@/lib/useAsync";
-import type { PageKey } from "@/lib/nav";
+import type { ShopPage } from "@/lib/nav";
 
 const k = (v: number | string | null | undefined): Kobo => Math.round(money(v) * 100) as Kobo;
 
 /** The owner's first screen: the shop at a glance for any period, plus what needs attention. */
-export function OverviewScreen({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
+export function OverviewScreen({ onNavigate }: { onNavigate: (p: ShopPage) => void }) {
   const { active, auth } = useSession();
   const shop = active!.shop;
   const perms = active!.permissions;
