@@ -484,9 +484,57 @@ the desktop install. Switched off / discontinued when Nathan says. Not
 started; nothing built for it yet.
 
 ## Stage 8 — Web dashboard
-Status: NOT STARTED
-Owner control tower: subscriptions, user/role management, device
-activation flow, reporting, device online/offline status.
+Status: BUILT (2026-09-13) — `0014_web_dashboard.sql` NOT YET APPLIED; not
+yet deployed to Vercel. Verified locally: builds, lint/tests green, login
+renders (desktop + phone widths); screens past login not exercised in a
+browser by me (no credentials) — Nathan to click through after 0014.
+
+**Decision (Nathan, 2026-09-13):** Vite + React SPA instead of the TRD's
+Next.js — logged in TRD §2. Reason: shares `@zogal/ui` and the whole
+component stack with the desktop app; nothing to render server-side.
+
+**Built:**
+- `packages/ui` (`@zogal/ui`) — extracted from the desktop app: shadcn
+  primitives, brand marks, Alert/Confirm/toasts, NumberField, PeriodPicker,
+  number + period helpers, token stylesheet. Desktop imports rewritten.
+- `apps/web` — path-based pages (no router lib), `SessionProvider` (same
+  Supabase auth; active shop is a choice, remembered per browser; `admin`
+  flag from `is_platform_admin()`), responsive `Shell` (forest sidebar ≥
+  md, top bar + drawer below), Zogal back-office section only for
+  platform admins.
+- Owner screens: **Overview** (period picker, takings / gross+net profit /
+  stock / terminals online, series chart, sync-issue alert), **Reports**
+  (`shop_report()`: by item / seller / terminal / customer / expense
+  category, totals, CSV export), **Staff** (invite by email + role, change
+  role, deactivate/reactivate, per-person permission overrides with
+  plain-language names, custom roles from the fixed list, own manager
+  PIN, pending invitations), **Terminals** (activation code — the locked
+  §1 flow — online/offline, last sync, revoke), **Tax** (ported: declare
+  category, status cards, mark filed), **Sync issues** (ported),
+  **Subscription** (read-only: status/plan/expiry/days left; renewals via
+  Zogal for now), **Settings** (shop name, timezone).
+- Back office (`/admin/*`): **Shops** (every shop: owner, subscription,
+  staff/terminals online, scans this month, open conflicts, 30-day sales;
+  set status/plan/expiry with +30/+90/+1y), **Platform settings** (0013
+  keys, inline edit, history), **Operational settings** (§5.1 values in
+  plain words; merge-patch, history kept).
+- `0014_web_dashboard.sql` (**to run**): `shop_report()`,
+  `admin_list_shops()`, `admin_set_subscription()`,
+  `admin_operational_settings()` / `admin_update_operational_settings()`,
+  `admin_set_platform_setting()`; drops the duplicate
+  `notebook_free_scans_monthly` from operational_settings (0013's platform
+  setting is the one source of truth).
+- `vercel.json` at repo root: build `npm run web:build`, output
+  `apps/web/dist`, SPA rewrite. Vercel project must point at the repo
+  root (it was wrongly at apps/desktop). Env vars needed on Vercel:
+  `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+
+**Not done / notes:**
+- Payments (Paystack/Flutterwave) — own unit of work; subscription is set
+  by the back office.
+- The "temporary partner web build" is a different thing (the POS as a web
+  app for a partner to test) and stays scheduled for the end.
+- Node 22.11 on this machine is below Vite 7's 22.12 floor — works, warns.
 
 ## Stage 9 — Operational center
 Status: NOT STARTED
@@ -551,6 +599,10 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   partner web build for the end of the sequence.
 - **2026-09-13** — 0013 applied. Edge Function deploy deferred until Nathan
   has an Anthropic API key (see Stage 7 PENDING). Next: Stage 8.
+- **2026-09-13** — Stage 8 built: `@zogal/ui` extracted; `apps/web`
+  dashboard + Zogal back office; 0014 handed to Nathan. Vite SPA instead of
+  Next.js (Nathan's decision, TRD §2 corrected). Next: apply 0014, deploy
+  to Vercel, Nathan clicks through; then Stage 9.
 - **2026-09-11** — Nathan's offline test: selling worked but nothing else
   reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
   per-user attribution on shared terminals (0009, approved). 43 tests.

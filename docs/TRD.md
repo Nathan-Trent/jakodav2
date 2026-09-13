@@ -28,7 +28,7 @@ Three surfaces, distinct jobs — nothing shared across them beyond the database
   - Schema is plain, standard SQL. No proprietary Supabase-only constructs that don't travel.
   - **Auth**: Supabase Auth handles the login mechanism only (this is the hardened, hard-to-get-wrong part — keep it). All real identity and permissioning (roles, custom permissions, shop membership) lives in your own tables. If Supabase Auth is ever swapped out, only the login mechanism changes — user data and logic are untouched.
   - **RLS and Edge Functions kept thin** — configuration only. Real business logic lives in your own application code, portable to any Postgres host.
-  - Vercel hosts the Next.js web dashboard only — irrelevant to the desktop client.
+  - Vercel hosts the web dashboard only — irrelevant to the desktop client. *(Correction 2026-09-13, Nathan's decision: the dashboard is a Vite + React static SPA, not Next.js — same stack as the desktop app so both share the `@zogal/ui` design-system package; there is nothing to render server-side since every read goes to Postgres under RLS. Portability is unchanged.)*
 
 ## 3. Architecture Pattern (locked)
 

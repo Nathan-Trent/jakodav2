@@ -4,8 +4,24 @@
     {
       "name": "desktop-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "-w", "@zogal/desktop"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "@zogal/desktop"
+      ],
       "port": 1420
+    },
+    {
+      "name": "web-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "-w",
+        "@zogal/web"
+      ],
+      "port": 5173
     }
   ]
 }
