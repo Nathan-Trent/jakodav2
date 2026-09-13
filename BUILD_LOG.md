@@ -425,10 +425,15 @@ Status: BUILT — `0012_customers.sql` NOT YET APPLIED. 0011 applied.
   (record_sale has no `p_customer_id` yet) — apply 0012 before using it.
 
 ## Stage 7 — Notebook photo capture
-Status: BUILT (2026-09-12) — `0013_platform_settings_notebook.sql` NOT YET
-APPLIED; Edge Function `parse-notebook-page` NOT YET DEPLOYED (needs
-`ANTHROPIC_API_KEY` secret). Not type-checked locally (no Deno on this
-machine) — first deploy will tell.
+Status: BUILT (2026-09-12) — 0013 applied 2026-09-13.
+**PENDING (waiting on Nathan's Anthropic API key):** Edge Function
+`parse-notebook-page` is NOT deployed. The Scan-a-page screen shows the
+allowance and refuses cleanly ("Could not read the page right now") until
+it is. When the key is ready:
+  npx supabase secrets set ANTHROPIC_API_KEY=<key>
+  npx supabase functions deploy parse-notebook-page
+Not type-checked locally (no Deno on this machine) — first deploy will tell;
+paste any error back.
 
 **Nathan's rule (2026-09-12): platform keys are set by the BUSINESS back
 office, not the shop owner, and not in .env.** Built as `platform_settings`
@@ -544,6 +549,8 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   keys), notebook scans + quota, `parse-notebook-page` Edge Function,
   Scan-a-page screen. 0013 + function deploy handed to Nathan. Noted the
   partner web build for the end of the sequence.
+- **2026-09-13** — 0013 applied. Edge Function deploy deferred until Nathan
+  has an Anthropic API key (see Stage 7 PENDING). Next: Stage 8.
 - **2026-09-11** — Nathan's offline test: selling worked but nothing else
   reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
   per-user attribution on shared terminals (0009, approved). 43 tests.
