@@ -268,7 +268,9 @@ export class AuthRepository {
       .from("devices")
       .update({ revoked_at: new Date().toISOString() })
       .eq("id", id)
-      .select()
+      // Only the columns the client is granted — `select()` (= *) would ask
+      // for credential_hash and Postgres refuses the whole update.
+      .select("id, shop_id, name, activated_by, activated_at, last_sync_at, revoked_at, created_at")
       .single<DeviceRow>();
     if (error) throw error;
     return data;
