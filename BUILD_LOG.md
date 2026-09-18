@@ -528,6 +528,20 @@ paper ground; ornament = rule + stamp; leaves and LeafField removed;
 Marketing repo: Zogal Business = ink + amber prospectus; Doka = coral
 product sheet; per-product accent via `data-product`.
 
+## Tax in plain answers; no blank screens; login (2026-09-18)
+- Tax page (till + dashboard) now answers three questions per tax — do I
+  owe anything right now / when is the next payment / roughly how much —
+  plus one "what to do" line; the working is folded away. Logic in
+  `packages/tax-engine/src/plain.ts` (`explainObligation`, tested),
+  card in `@zogal/ui` `TaxAnswerCard`.
+- Offline: the till caches the user's context after each sign-in and runs
+  on it when the server is unreachable; with nothing cached it shows
+  `ConnectionScreen` (no internet / can't reach Doka, retry, auto-retry on
+  reconnect) — never a blank screen. Dashboard shows the same screen.
+  Login screens say plainly when there's no connection.
+- Login: `AuthCover` now carries the day-book ledger (rows animate in) and
+  the stamp; matches the product page. v0.3.2.
+
 ## Release pipeline — LIVE (2026-09-18)
 v0.3.0 (Windows) and v0.3.1 (Windows + macOS arm64/x86_64, unsigned) built
 and published by GitHub Actions from tags. Updater public key in

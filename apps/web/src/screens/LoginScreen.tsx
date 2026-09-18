@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { AuthFrame } from "@/components/AuthFrame";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
+import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
 import { useSession } from "@/lib/session";
+import { useOnline } from "@/lib/useOnline";
 
 export function LoginScreen({ variant = "shop" }: { variant?: "shop" | "admin" } = {}) {
   const { auth } = useSession();
+  const online = useOnline();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,6 +41,7 @@ export function LoginScreen({ variant = "shop" }: { variant?: "shop" | "admin" }
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="grid gap-4">
+            {!online && <Alert tone="warning" title="No internet connection">Signing in needs a connection. Doka works offline after that.</Alert>}
             {mode === "signup" && (
               <div className="grid gap-2">
                 <Label htmlFor="fullName">Full name</Label>
@@ -53,7 +56,7 @@ export function LoginScreen({ variant = "shop" }: { variant?: "shop" | "admin" }
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete={mode === "signin" ? "current-password" : "new-password"} />
             </div>
-            <Button type="submit" className="w-full" disabled={busy}>
+            <Button type="submit" className="w-full" disabled={busy || !online}>
               {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
             </Button>
             {variant === "shop" && <Button type="button" variant="link" className="text-muted-foreground" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>

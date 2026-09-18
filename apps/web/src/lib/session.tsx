@@ -10,7 +10,7 @@ import { getSupabase } from "@/lib/supabase";
  * whether the back-office section is shown; Postgres enforces it.
  */
 interface SessionState {
-  status: "loading" | "signed-out" | "signed-in";
+  status: "loading" | "signed-out" | "signed-in" | "unreachable";
   ctx: MyContext | null;
   active: Membership | null;
   admin: boolean;
@@ -21,6 +21,11 @@ interface SessionState {
 }
 
 const Ctx = createContext<SessionState | null>(null);
+
+export function isNetworkError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : typeof e === "object" && e && "message" in e ? String((e as { message: unknown }).message) : String(e);
+  return /fetch|network|ECONN|timeout|Load failed|NetworkError/i.test(msg) || (typeof navigator !== "undefined" && !navigator.onLine);
+}
 const SHOP_KEY = "zogal.web.shop";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -37,10 +42,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setCtx(c);
       setAdmin(a);
       setStatus("signed-in");
-    } catch {
+    } catch (e) {
       setCtx(null);
       setAdmin(false);
-      setStatus("signed-out");
+      // Network trouble is not a sign-out: say so and offer retry (dashboard is online-only).
+      setStatus(isNetworkError(e) ? "unreachable" : "signed-out");
     }
   }, [auth, db]);
 

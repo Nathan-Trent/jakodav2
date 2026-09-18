@@ -26,3 +26,5 @@ export * from "./lib/errors.js";
 export * from "./lib/periods.js";
 export * from "./lib/numberFormat.js";
 export * from "./components/brand/AuthCover.js";
+export * from "./components/TaxAnswerCard.js";
+export * from "./components/brand/ConnectionScreen.js";

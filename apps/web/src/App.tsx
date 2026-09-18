@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, LoadingMark, Toaster } from "@zogal/ui";
+import { Alert, Button, ConnectionScreen, LoadingMark, Toaster } from "@zogal/ui";
 import { Shell } from "@/components/Shell";
 import { SessionProvider, useSession } from "@/lib/session";
 import { ADMIN_NAV, adminPageFromPath, adminPath, isAdminPath, shopPageFromPath, shopPath, visibleShopNav, type AdminPage, type ShopPage } from "@/lib/nav";
@@ -39,11 +39,12 @@ function usePath<K extends string>(fromPath: (p: string) => K, toPath: (k: K) =>
 
 /** The shop owner's dashboard at `/`. */
 function ShopRouter() {
-  const { status, ctx, active, signOut } = useSession();
+  const { status, ctx, active, signOut, refresh } = useSession();
   const [page, navigate] = usePath<ShopPage>(shopPageFromPath, shopPath);
 
   if (status === "loading") return <LoadingMark label="Starting up…" />;
   if (status === "signed-out") return <LoginScreen />;
+  if (status === "unreachable") return <ConnectionScreen onRetry={refresh} signOut={() => void signOut()} />;
   if (!active) {
     return (
       <div className="min-h-full grid place-items-center p-8">
@@ -71,11 +72,12 @@ function ShopRouter() {
 
 /** The Zogal back office at `/admin` — platform admins only; Postgres refuses everyone else anyway. */
 function AdminRouter() {
-  const { status, admin, ctx, signOut } = useSession();
+  const { status, admin, ctx, signOut, refresh } = useSession();
   const [page, navigate] = usePath<AdminPage>(adminPageFromPath, adminPath);
 
   if (status === "loading") return <LoadingMark label="Starting up…" />;
   if (status === "signed-out") return <LoginScreen variant="admin" />;
+  if (status === "unreachable") return <ConnectionScreen onRetry={refresh} signOut={() => void signOut()} />;
   if (!admin) {
     return (
       <div className="min-h-full grid place-items-center p-8">

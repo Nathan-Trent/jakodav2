@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Toaster, LoadingMark } from "@zogal/ui";
+import { Toaster, LoadingMark, ConnectionScreen } from "@zogal/ui";
 import { AppShell } from "@/components/AppShell";
 import { SessionProvider, useSession } from "@/lib/session";
 import { SyncProvider, useSync } from "@/lib/sync";
@@ -39,7 +39,7 @@ export function App() {
 
 /** Screen selection is pure state — no router lib needed for a POS. */
 function Router() {
-  const { status, active, device } = useSession();
+  const { status, active, device, refresh, signOut } = useSession();
   const { gate } = useSync();
   const [page, setPage] = useState<PageKey>("dashboard");
 
@@ -47,6 +47,8 @@ function Router() {
     return <LoadingMark label="Starting up…" />;
   }
   if (status === "signed-out") return <LoginScreen />;
+  // Session exists, server unreachable, nothing cached (first run offline) — say so, never blank.
+  if (status === "unreachable") return <ConnectionScreen onRetry={refresh} firstTime signOut={() => void signOut()} />;
   // Need a shop membership AND (for now) a bound terminal before selling.
   if (!active || !device) return <SetupScreen />;
 

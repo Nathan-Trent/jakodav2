@@ -10,7 +10,8 @@ import { clearDevice, loadDevice, saveDevice } from "@/lib/device";
  * screens need is derived here so components stay dumb.
  */
 interface SessionState {
-  status: "loading" | "signed-out" | "signed-in";
+  /** `unreachable`: there is a session but the server can't be reached and nothing is cached — show a connection screen, never a blank one. */
+  status: "loading" | "signed-out" | "signed-in" | "unreachable";
   ctx: MyContext | null;
   device: DeviceActivation | null;
   /** The membership matching the activated device's shop (or the only one). */
@@ -23,6 +24,13 @@ interface SessionState {
 }
 
 const Ctx = createContext<SessionState | null>(null);
+const CTX_KEY = "doka.session.ctx";
+
+/** Fetch failures, timeouts and Supabase's "Failed to fetch" are connectivity, not auth. */
+export function isNetworkError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : typeof e === "object" && e && "message" in e ? String((e as { message: unknown }).message) : String(e);
+  return /fetch|network|ECONN|timeout|Load failed|NetworkError/i.test(msg) || (typeof navigator !== "undefined" && !navigator.onLine);
+}
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const db = useMemo(() => getSupabase(), []);
@@ -33,15 +41,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [ctx, setCtx] = useState<MyContext | null>(null);
   const [device, setDeviceState] = useState<DeviceActivation | null>(() => loadDevice());
 
+  /**
+   * SYNC / offline: the till must open with no network once it has signed in
+   * once. The user's context (memberships, permissions) is cached after every
+   * successful bootstrap; if the server can't be reached we run on the cache.
+   * Only a genuine auth failure signs the user out.
+   */
   const refresh = useCallback(async () => {
     try {
       const c = await auth.bootstrap();
       setCtx(c);
       setStatus("signed-in");
+      try { localStorage.setItem(CTX_KEY, JSON.stringify(c)); } catch { /* ignore */ }
     } catch (e) {
+      const network = isNetworkError(e);
       console.error("bootstrap failed", e);
+      if (network) {
+        let cached: MyContext | null = null;
+        try { const raw = localStorage.getItem(CTX_KEY); cached = raw ? (JSON.parse(raw) as MyContext) : null; } catch { cached = null; }
+        if (cached) { setCtx(cached); setStatus("signed-in"); return; }
+        setCtx(null); setStatus("unreachable"); return;
+      }
       setCtx(null);
       setStatus("signed-out");
+      try { localStorage.removeItem(CTX_KEY); } catch { /* ignore */ }
     }
   }, [auth]);
 
@@ -71,6 +94,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [ctx, device]);
 
   const signOut = useCallback(async () => {
+    try { localStorage.removeItem(CTX_KEY); } catch { /* ignore */ }
     await auth.signOut();
   }, [auth]);
 

@@ -1,12 +1,13 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { IconAlertTriangle, IconCalendarCheck, IconCircleCheck, IconClock, IconFileCheck, IconInfoCircle, IconReceiptTax } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCalendarCheck, IconCircleCheck, IconClock, IconFileCheck, IconInfoCircle } from "@tabler/icons-react";
 import { formatNaira, type Kobo } from "@zogal/shared";
 import {
   computeObligations, declareTaxProfile, markPeriodFiled, periodStatuses,
   type BusinessCategory, type PeriodStatus, type TaxObligation,
 } from "@zogal/tax-engine";
+import { explainObligation, summariseAnswers } from "@zogal/tax-engine";
 import { PageHeader } from "@/components/AppShell";
-import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, notifyError, notifySuccess, cn } from "@zogal/ui";
+import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, notifyError, notifySuccess, cn, TaxAnswerCard } from "@zogal/ui";
 import { StaleNotice } from "@/components/StaleNotice";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
@@ -99,27 +100,31 @@ export function TaxScreen() {
   const profile = tax.profile;
   const category = tax.categories.find((c) => c.key === profile.categoryKey);
   const anyDraft = obligations.some((o) => !o.verified);
+  const answers = obligations.map((o) => ({ name: o.taxType.name, o, a: explainObligation(o, asOf) }));
+  const headline = summariseAnswers(answers);
   const outstanding = statuses.filter((s) => s.status === "due" || s.status === "overdue");
 
   return (
     <>
       <PageHeader
         title="Tax"
-        description={`${category?.name ?? profile.categoryKey}${profile.tin ? ` · TIN ${profile.tin}` : ""}`}
+        description={headline}
         actions={canDeclare && <ChangeCategoryButton current={profile.categoryKey} vatRegistered={profile.vatRegistered} tin={profile.tin} categories={tax.categories} onDone={refresh} />}
       />
       <div className="px-8 pb-8 grid gap-5">
         <StaleNotice />
 
-        {anyDraft && (
-          <Alert tone="warning" title="These are draft estimates">
-            The rates and thresholds have been entered but not yet confirmed by an accountant. Use them to see where you stand — not to file. They'll be marked confirmed once checked.
-          </Alert>
-        )}
+        <p className="text-caption text-muted-foreground">
+          {category?.name ?? profile.categoryKey}{profile.tin ? ` · TIN ${profile.tin}` : ""}
+          {anyDraft ? " · Figures are estimates until an accountant confirms the rates — good for planning, not for filing." : ""}
+        </p>
 
-        {/* --- 2. Where you stand -------------------------------------- */}
+        {/* --- 2. Three plain answers per tax --------------------------- */}
         <div className="grid gap-4 xl:grid-cols-2">
-          {obligations.map((o) => <ObligationCard key={o.taxType.key} o={o} />)}
+          {answers.map(({ o, a }) => (
+            <TaxAnswerCard key={o.taxType.key} name={o.taxType.name} state={a.state} owe={a.owe} when={a.when} howMuch={a.howMuch} next={a.next} because={a.because} draft={!o.verified}
+              thresholdPct={o.threshold && !o.threshold.above ? Math.round((o.threshold.current / o.threshold.amount) * 100) : null} />
+          ))}
         </div>
 
         {/* --- 3. What's due --------------------------------------------- */}
@@ -132,7 +137,7 @@ export function TaxScreen() {
                 : <Badge variant="success"><IconCircleCheck size={12} /> Nothing outstanding</Badge>}
             </div>
             <p className="text-small text-muted-foreground">
-              Filing happens on the FIRS / State IRS portal, not here. When you've filed, mark the period with the reference number they give you — that locks it so nothing inside it changes silently.
+              You pay and file on the tax office&apos;s own website, not here. When you&apos;ve done that, press &ldquo;Mark filed&rdquo; and type the reference number they gave you — Doka then locks that month so its figures can&apos;t change by accident.
             </p>
             <ul className="divide-y">
               {statuses.slice(0, 24).map((s) => {
@@ -162,7 +167,7 @@ export function TaxScreen() {
           <CardContent className="flex items-start gap-3">
             <IconInfoCircle size={18} className="text-muted-foreground mt-0.5 shrink-0" />
             <div className="text-small text-muted-foreground">
-              <b className="text-foreground">Reliefs and refunds</b> — charitable donations, pension contributions and withholding-tax credits can reduce what you owe. The system can record them, but won't apply them to the figures above until the relief rules are sourced and confirmed.
+              <b className="text-foreground">Things that could reduce what you pay</b> — donations, pension payments and tax already deducted at source. Doka can keep a record of these, but doesn&apos;t take them off the figures above yet.
             </div>
           </CardContent>
         </Card>
@@ -192,62 +197,10 @@ function StatusBadge({ status }: { status: PeriodStatus["status"] }) {
     case "filed": return <Badge variant="success"><IconCircleCheck size={12} /> Filed</Badge>;
     case "overdue": return <Badge variant="critical"><IconAlertTriangle size={12} /> Overdue</Badge>;
     case "due": return <Badge variant="warning"><IconClock size={12} /> To file</Badge>;
-    default: return <Badge variant="secondary">In progress</Badge>;
+    default: return <Badge variant="secondary">Not yet due</Badge>;
   }
 }
 
-function ObligationCard({ o }: { o: TaxObligation }) {
-  const pct = o.threshold ? Math.min(100, Math.round((o.threshold.current / o.threshold.amount) * 100)) : null;
-  return (
-    <Card className={cn("gap-0", !o.liable && "opacity-90")}>
-      <CardContent className="grid gap-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-title flex items-center gap-2"><IconReceiptTax size={18} /> {o.taxType.name}</div>
-            <div className="text-caption text-muted-foreground">{o.taxType.authority} · {o.taxType.period === "monthly" ? "monthly" : "yearly"}</div>
-          </div>
-          {o.liable ? <Badge variant="warning">Applies</Badge> : <Badge variant="secondary">Not yet</Badge>}
-          {!o.verified && <Badge variant="outline" className="border-status-amber text-status-amber">Draft</Badge>}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <div className="text-micro text-muted-foreground">{o.basisLabel || "Basis"}</div>
-            <div className="figure figure-lg">{naira(o.basisAmount)}</div>
-          </div>
-          <div>
-            <div className="text-micro text-muted-foreground">Estimated {o.taxType.period === "monthly" ? "this month" : "this year"}</div>
-            <div className={cn("figure figure-lg", o.estimate === null && "text-muted-foreground")}>{o.estimate === null ? "—" : naira(o.estimate)}</div>
-            {o.rate !== null && o.liable && <div className="text-caption text-muted-foreground">at {Math.round(o.rate * 100)}%{o.effectiveRate !== null && o.effectiveRate !== o.rate ? ` (effective ${(o.effectiveRate * 100).toFixed(1)}%)` : ""}</div>}
-          </div>
-        </div>
-
-        {o.threshold && (
-          <div className="grid gap-1">
-            <div className="flex justify-between text-caption text-muted-foreground">
-              <span>{naira(o.threshold.current)} of the {naira(o.threshold.amount)} yearly threshold</span>
-              <span>{o.threshold.above ? "Crossed" : `${naira(o.threshold.remaining)} to go`}</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div className={cn("h-full rounded-full", o.threshold.above ? "bg-status-amber" : "bg-brand-action")} style={{ width: `${pct ?? 0}%` }} />
-            </div>
-          </div>
-        )}
-
-        {o.nextDue && (
-          <div className="text-caption text-muted-foreground">
-            Next filing: <b className="text-foreground">{new Date(o.nextDue.date + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}</b> for {periodLabel({ periodStart: o.nextDue.periodStart, periodEnd: o.nextDue.periodEnd } as PeriodStatus)}
-          </div>
-        )}
-        {o.notes.length > 0 && (
-          <ul className="text-caption text-muted-foreground grid gap-0.5">
-            {o.notes.map((n, i) => <li key={i}>· {n}</li>)}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 // ---- Declaration -----------------------------------------------------------
 

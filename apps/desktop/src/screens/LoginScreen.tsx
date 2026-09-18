@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { AuthFrame } from "@/components/AuthFrame";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
+import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
 import { useSession } from "@/lib/session";
+import { useOnline } from "@/lib/useOnline";
 
 export function LoginScreen() {
   const { auth } = useSession();
+  const online = useOnline();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,11 +36,12 @@ export function LoginScreen() {
     <AuthFrame>
       <Card className="w-full max-w-sm elev-3">
         <CardHeader>
-          <CardTitle className="text-heading">Welcome back</CardTitle>
+          <CardTitle className="text-heading">{mode === "signin" ? "Welcome back" : "Create your shop"}</CardTitle>
           <CardDescription>{mode === "signin" ? "Sign in to your shop" : "Create your account"}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="grid gap-4">
+            {!online && <Alert tone="warning" title="No internet connection">Signing in needs a connection. Doka works offline after that.</Alert>}
             {mode === "signup" && (
               <div className="grid gap-2">
                 <Label htmlFor="fullName">Full name</Label>
@@ -53,7 +56,7 @@ export function LoginScreen() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete={mode === "signin" ? "current-password" : "new-password"} />
             </div>
-            <Button type="submit" className="w-full" disabled={busy}>
+            <Button type="submit" className="w-full" disabled={busy || !online}>
               {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
             </Button>
             <Button type="button" variant="link" className="text-muted-foreground" onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>

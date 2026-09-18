@@ -176,6 +176,8 @@
   /* Doka ornament: the ledger rule and the stamp. */
   .rule { border-top: 1px solid hsl(var(--border)); }
   .rule-strong { border-top: 2px solid var(--jk-forest); }
+  @keyframes ledger-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .ledger-row { animation: ledger-in 0.5s ease both; }
   .stamp { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid currentColor; border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; transform: rotate(-2deg); }
 }
 
