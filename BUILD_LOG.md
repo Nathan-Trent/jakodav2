@@ -502,6 +502,23 @@ second Vercel project for the partner POS; subdomains.
 - Naming: brand lockup now says "Zogal Business" / "Zogal Back office";
   product name still to be decided by Nathan (Zogal Shop recommended).
 
+## Naming, pricing, marketing site (Nathan, 2026-09-17/18)
+Status: BUILT — `0015_pricing_pos_web.sql` NOT YET APPLIED.
+
+- **Product name: Doka by Zogal.** Zogal → Zogal Business (sub-brand) →
+  Doka (this product). `.com` = marketing, `.app` = the product.
+  Lockup/window/installer renamed; identifier `app.zogal.doka`.
+- URLs: `business.getzogal.com` (sub-brand landing) and
+  `business.getzogal.com/doka` (product page, pricing, sign-up →
+  `doka.zogal.app`). Marketing site is a SEPARATE repo:
+  github.com/Nathan-Trent/zogalbusiness (Next.js, Vercel).
+- 0015: `pricing_plans` (public read, admin write, 3 seeded plans — Nathan
+  edits in back office → Pricing) and `pos_web.enabled` kill switch for the
+  partner web till (`WebTillGate` checks `pos_web_enabled()` before login;
+  installed desktop never gated; cached answer offline).
+- Release workflow now builds macOS (arm64 + x86_64) alongside Windows;
+  unsigned until Apple Developer secrets exist (docs/RELEASING.md).
+
 ## Scheduled: temporary partner web build (Nathan, 2026-09-12)
 At the END of the build sequence: host the same app as a web build (it is a
 Vite app inside Tauri already) so a partner can sign up and test without
@@ -632,6 +649,9 @@ Includes §5.1 operational settings page and §8.1 tax settings page.
   desktop auto-updater + GitHub release pipeline, split `/admin` into its
   own entry, `pos:build` for the partner web build. Nathan to: generate
   updater keys, add GitHub secrets, create the POS Vercel project.
+- **2026-09-18** — Renamed to Doka by Zogal. 0015 (pricing + web-till
+  switch) handed to Nathan. macOS in release matrix. zogalbusiness repo
+  created with the sub-brand landing and Doka page.
 - **2026-09-11** — Nathan's offline test: selling worked but nothing else
   reflected it. Rebuilt reads as snapshot + overlay; add-stock journey;
   per-user attribution on shared terminals (0009, approved). 43 tests.
