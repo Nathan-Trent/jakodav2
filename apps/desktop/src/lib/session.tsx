@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AuthRepository, type DeviceActivation, type Membership, type MyContext } from "@zogal/auth-permissions";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AuthRepository, recordSignin, type DeviceActivation, type Membership, type MyContext } from "@zogal/auth-permissions";
 import { InventoryRepository } from "@zogal/inventory-batches";
 import { getSupabase } from "@/lib/supabase";
 import { clearDevice, loadDevice, saveDevice } from "@/lib/device";
@@ -40,6 +40,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SessionState["status"]>("loading");
   const [ctx, setCtx] = useState<MyContext | null>(null);
   const [device, setDeviceState] = useState<DeviceActivation | null>(() => loadDevice());
+  const signinRecorded = useRef(false);
 
   /**
    * SYNC / offline: the till must open with no network once it has signed in
@@ -53,6 +54,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setCtx(c);
       setStatus("signed-in");
       try { localStorage.setItem(CTX_KEY, JSON.stringify(c)); } catch { /* ignore */ }
+      // Once per app start: tell the back office where this sign-in is (0016).
+      if (!signinRecorded.current) { signinRecorded.current = true; void recordSignin(db, "desktop", loadDevice()?.shop_id ?? null); }
     } catch (e) {
       const network = isNetworkError(e);
       console.error("bootstrap failed", e);
@@ -66,7 +69,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setStatus("signed-out");
       try { localStorage.removeItem(CTX_KEY); } catch { /* ignore */ }
     }
-  }, [auth]);
+  }, [auth, db]);
 
   useEffect(() => {
     const { data: sub } = db.auth.onAuthStateChange((event, session) => {

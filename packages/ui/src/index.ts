@@ -28,3 +28,4 @@ export * from "./lib/numberFormat.js";
 export * from "./components/brand/AuthCover.js";
 export * from "./components/TaxAnswerCard.js";
 export * from "./components/brand/ConnectionScreen.js";
+export * from "./components/PresenceBar.js";

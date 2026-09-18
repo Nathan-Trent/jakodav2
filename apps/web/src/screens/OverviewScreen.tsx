@@ -54,8 +54,9 @@ export function OverviewScreen({ onNavigate }: { onNavigate: (p: ShopPage) => vo
             {series.length === 0 ? <p className="text-small text-muted-foreground">{dash.loading ? "Loading…" : "No sales in this period."}</p> : (
               <div className="flex items-end h-36" style={{ gap: series.length > 14 ? 2 : 8 }}>
                 {series.map((s) => (
-                  <div key={s.day} className="flex-1 min-w-0 grid content-end h-full gap-1" title={`${new Date(s.day + "T00:00:00").toLocaleDateString()} · ${formatNaira(k(s.total))} · ${s.count} sales`}>
-                    <div className="flex items-end h-full"><div className="w-full rounded-[4px] bg-brand-mint" style={{ height: `${Math.max(4, Math.round((money(s.total) / max) * 100))}%` }} /></div>
+                  <div key={s.day} className="flex-1 min-w-0 flex flex-col justify-end gap-1" title={`${new Date(s.day + "T00:00:00").toLocaleDateString()} · ${formatNaira(k(s.total))} · ${s.count} sales`}>
+                    {/* pixel heights: percentages collapse when the label row is hidden */}
+                    <div className="w-full rounded-[4px] bg-brand-mint" style={{ height: Math.max(4, Math.round((money(s.total) / max) * (series.length > 14 ? 144 : 120))) }} />
                     {series.length <= 14 && <div className="text-micro text-center text-muted-foreground truncate">{series.length <= 7 ? new Date(s.day + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2) : new Date(s.day + "T00:00:00").getDate()}</div>}
                   </div>
                 ))}

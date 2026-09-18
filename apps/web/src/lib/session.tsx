@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { AuthRepository, isPlatformAdmin, type Membership, type MyContext } from "@zogal/auth-permissions";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AuthRepository, isPlatformAdmin, recordSignin, type Membership, type MyContext } from "@zogal/auth-permissions";
 import { getSupabase } from "@/lib/supabase";
 
 /**
@@ -34,6 +34,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SessionState["status"]>("loading");
   const [ctx, setCtx] = useState<MyContext | null>(null);
   const [admin, setAdmin] = useState(false);
+  const signinRecorded = useRef(false);
   const [shopId, setShopId] = useState<string | null>(() => { try { return localStorage.getItem(SHOP_KEY); } catch { return null; } });
 
   const refresh = useCallback(async () => {
@@ -42,6 +43,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setCtx(c);
       setAdmin(a);
       setStatus("signed-in");
+      if (!signinRecorded.current) { signinRecorded.current = true; void recordSignin(db, "web", c.memberships[0]?.shop.id ?? null); }
     } catch (e) {
       setCtx(null);
       setAdmin(false);

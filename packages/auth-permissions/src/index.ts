@@ -4,3 +4,4 @@ export * from "./types.js";
 export * from "./repository.js";
 export * from "./staff.js";
 export * from "./admin.js";
+export * from "./presence.js";

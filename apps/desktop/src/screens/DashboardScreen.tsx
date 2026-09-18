@@ -220,16 +220,18 @@ function WeekBars({ week, highlightLast = true }: { week: ShopDashboard["week"];
   const totals = week.map((d) => money(d.total));
   const max = Math.max(1, ...totals);
   const many = week.length > 14;
+  // Pixel heights, not percentages: a percentage needs a parent with a fixed
+  // height, and with the labels hidden (> 14 bars) the column had none — every
+  // bar rendered at 0 and "Last 30 days" was blank.
+  const BAR_AREA = many ? 144 : 120;
   return (
-    <div className="flex gap-1 items-end h-36" style={{ gap: many ? 2 : 8 }}>
+    <div className="flex items-end h-36" style={{ gap: many ? 2 : 8 }}>
       {week.map((d, i) => {
-        const h = Math.max(4, Math.round((totals[i]! / max) * 100));
+        const px = Math.max(4, Math.round((totals[i]! / max) * BAR_AREA));
         const isToday = highlightLast && i === week.length - 1;
         return (
-          <div key={d.day} className="grid gap-1.5 content-end h-full flex-1 min-w-0" title={`${new Date(d.day + "T00:00:00").toLocaleDateString()} · ${formatNaira(totals[i]!)} · ${d.count} sales`}>
-            <div className="flex items-end h-full">
-              <div className={cn("w-full rounded-[4px] transition-[height]", isToday ? "bg-brand-action" : "bg-brand-mint")} style={{ height: `${h}%` }} />
-            </div>
+          <div key={d.day} className="flex flex-col justify-end gap-1.5 flex-1 min-w-0" title={`${new Date(d.day + "T00:00:00").toLocaleDateString()} · ${formatNaira(totals[i]!)} · ${d.count} sales`}>
+            <div className={cn("w-full rounded-[4px] transition-[height]", isToday ? "bg-brand-action" : "bg-brand-mint")} style={{ height: px }} />
             {!many && (
               <div className={cn("text-micro text-center truncate", isToday ? "text-foreground" : "text-muted-foreground")}>
                 {week.length <= 7

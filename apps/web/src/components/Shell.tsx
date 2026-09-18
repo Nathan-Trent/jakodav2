@@ -3,6 +3,7 @@ import type { Icon } from "@tabler/icons-react";
 import { IconExternalLink, IconLogout, IconMenu2, IconX } from "@tabler/icons-react";
 import { Badge, ZogalLockup, ZogalMark, cn } from "@zogal/ui";
 import { useSession } from "@/lib/session";
+import { Presence } from "@/components/Presence";
 import type { NavItem } from "@/lib/nav";
 
 /**
@@ -65,7 +66,7 @@ export function Shell<K extends string>({ items, page, onNavigate, variant, chil
         <div className="flex items-center px-5 pt-5 pb-4"><ZogalLockup size={32} sub={sub} /></div>
         {menu}
       </aside>
-      <main className="min-w-0 bg-background">{children}</main>
+      <main className="min-w-0 bg-background">{variant === "shop" && <Presence />}{children}</main>
     </div>
   );
 }

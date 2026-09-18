@@ -3,6 +3,7 @@ import { IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLogout 
 import { Badge, ZogalLockup, ZogalMark, cn } from "@zogal/ui";
 import { SyncBadge } from "@/components/SyncBadge";
 import { UpdateBanner } from "@/components/UpdateBanner";
+import { Presence } from "@/components/Presence";
 import { useSession } from "@/lib/session";
 import { visibleNav, type PageKey } from "@/lib/nav";
 
@@ -99,7 +100,7 @@ export function AppShell({ page, onNavigate, children }: { page: PageKey; onNavi
         </div>
       </aside>
 
-      <main className="min-h-0 min-w-0 overflow-y-auto"><UpdateBanner />{children}</main>
+      <main className="min-h-0 min-w-0 overflow-y-auto"><UpdateBanner /><Presence />{children}</main>
     </div>
   );
 }

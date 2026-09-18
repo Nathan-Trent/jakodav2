@@ -542,6 +542,17 @@ product sheet; per-product accent via `data-product`.
 - Login: `AuthCover` now carries the day-book ledger (rows animate in) and
   the stamp; matches the product page. v0.3.2.
 
+## Zogal Business back office — slice 1 (2026-09-19)
+Repo github.com/Nathan-Trent/backofficezogalbusiness → ops.business.zogal.app.
+0016 applied. Company (ink+amber) / product (Doka coral) frame with zogal.app's
+sidebar rule; Root + staff switches (invite by email); Who is told; Activity;
+Health per feature; Doka: sign-in map, shops, shop page (subscription, people,
+terminals), users, user profile (linked owner, effective permissions), Message
+(Doka identity, email + in-app), Sign in as (reason, 30 min, logged). Marketing
+and Finance are placeholders (slices 2–3). Apps (v0.3.3): record_signin on
+sign-in; PresenceBar shows notices and the impersonation bar. Fixed: 30-day
+chart blank (percentage bar heights); revoke terminal (select of ungranted column).
+
 ## Release pipeline — LIVE (2026-09-18)
 v0.3.0 (Windows) and v0.3.1 (Windows + macOS arm64/x86_64, unsigned) built
 and published by GitHub Actions from tags. Updater public key in
