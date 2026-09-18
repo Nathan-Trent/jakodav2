@@ -1,11 +1,11 @@
 [package]
-name = "zogal-erp-desktop"
+name = "doka-desktop"
 version = "0.2.0"
-description = "Zogal ERP desktop POS client"
+description = "Doka by Zogal — desktop till"
 edition = "2021"
 
 [lib]
-name = "zogal_erp_lib"
+name = "doka_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

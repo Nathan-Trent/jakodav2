@@ -1,4 +1,4 @@
-# Builds the Windows installer and publishes it as a GitHub Release whenever a
+# Builds the Windows installer and macOS apps (Apple Silicon + Intel) and publishes it as a GitHub Release whenever a
 # version tag is pushed (v0.2.0, v1.0.0 …). Installed desktops read the
 # release's latest.json through the Tauri updater and offer the update.
 #
@@ -18,8 +18,21 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ""
+          # Apple Silicon and Intel. Unsigned until Nathan has an Apple
+          # Developer ID (then add APPLE_* secrets — see docs/RELEASING.md);
+          # unsigned builds open with right-click → Open the first time.
+          - platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - platform: macos-latest
+            args: "--target x86_64-apple-darwin"
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +42,8 @@ jobs:
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -45,10 +60,18 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUBSCRIPTION_PUBLIC_KEY: ${{ secrets.VITE_SUBSCRIPTION_PUBLIC_KEY }}
+          # macOS signing/notarisation — optional; builds are unsigned when absent.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
+          args: ${{ matrix.args }}
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
-          releaseName: "Zogal ${{ github.ref_name }}"
+          releaseName: "Doka ${{ github.ref_name }}"
           releaseBody: "See the commit log for what changed. Installed apps update themselves."
           releaseDraft: false
           prerelease: false

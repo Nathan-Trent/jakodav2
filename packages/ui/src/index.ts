@@ -1,5 +1,5 @@
 /**
- * @zogal/ui — the Zogal ERP design system as code: shadcn primitives,
+ * @zogal/ui — the Doka (by Zogal) design system as code: shadcn primitives,
  * brand marks, feedback (toasts / Alert / Confirm), number + period helpers,
  * and the token stylesheet. Shared by the desktop app and the web dashboard
  * (TRD §3: frontend-desktop and frontend-web are separate modules; this is

@@ -65,3 +65,33 @@ export async function adminUpdateOperationalSettings(db: SupabaseClient, patch: 
   if (error) throw error;
   return data as Record<string, number>;
 }
+
+// ---- pricing plans (0015) ---------------------------------------------------
+export interface PricingPlan {
+  id: string; product: string; key: string; name: string; tagline: string | null;
+  price_monthly: number | string; price_yearly: number | string | null; currency: string;
+  features: string[]; limits: Record<string, number | null>;
+  highlight: boolean; is_visible: boolean; sort_order: number; updated_at: string;
+}
+
+/** Public: visible plans for a product (the marketing site calls this anonymously). */
+export async function listPricingPlans(db: SupabaseClient, product = "doka"): Promise<PricingPlan[]> {
+  const { data, error } = await db.from("pricing_plans").select("*").eq("product", product).order("sort_order");
+  if (error) throw error;
+  return data as PricingPlan[];
+}
+
+export async function upsertPricingPlan(db: SupabaseClient, plan: Partial<PricingPlan> & { key: string; name: string; price_monthly: number }): Promise<void> {
+  const rest: Record<string, unknown> = { ...plan };
+  delete rest.id; delete rest.updated_at;
+  const row = { product: "doka", ...rest };
+  const { error } = plan.id
+    ? await db.from("pricing_plans").update(row).eq("id", plan.id)
+    : await db.from("pricing_plans").insert(row);
+  if (error) throw error;
+}
+
+export async function deletePricingPlan(db: SupabaseClient, id: string): Promise<void> {
+  const { error } = await db.from("pricing_plans").delete().eq("id", id);
+  if (error) throw error;
+}

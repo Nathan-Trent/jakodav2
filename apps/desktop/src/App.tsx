@@ -20,17 +20,20 @@ import { TaxScreen } from "@/screens/TaxScreen";
 import { ComingSoonScreen } from "@/screens/ComingSoonScreen";
 import { ConflictsScreen } from "@/screens/ConflictsScreen";
 import { GateBanner, LockedScreen } from "@/components/GateBanner";
+import { WebTillGate } from "@/components/WebTillGate";
 
 export function App() {
   return (
-    <SessionProvider>
-      <SyncProvider>
-        <ShopDataProvider>
-          <Router />
-          <Toaster position="top-center" richColors />
-        </ShopDataProvider>
-      </SyncProvider>
-    </SessionProvider>
+    <WebTillGate>
+      <SessionProvider>
+        <SyncProvider>
+          <ShopDataProvider>
+            <Router />
+            <Toaster position="top-center" richColors />
+          </ShopDataProvider>
+        </SyncProvider>
+      </SessionProvider>
+    </WebTillGate>
   );
 }
 

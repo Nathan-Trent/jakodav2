@@ -31,10 +31,10 @@ export function LoginScreen({ variant = "shop" }: { variant?: "shop" | "admin" }
   }
 
   return (
-    <AuthFrame sub={variant === "admin" ? "Back office" : "Business"}>
+    <AuthFrame sub={variant === "admin" ? "Back office" : "by Zogal"}>
       <Card className="w-full max-w-sm elev-3">
         <CardHeader>
-          <CardTitle className="text-heading">{variant === "admin" ? "Zogal back office" : "Welcome back"}</CardTitle>
+          <CardTitle className="text-heading">{variant === "admin" ? "Doka back office" : "Welcome back"}</CardTitle>
           <CardDescription>{variant === "admin" ? "Platform admins only" : mode === "signin" ? "Sign in to your shop" : "Create your account"}</CardDescription>
         </CardHeader>
         <CardContent>

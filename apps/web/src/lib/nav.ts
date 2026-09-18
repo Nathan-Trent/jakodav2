@@ -1,6 +1,6 @@
 import type { Permission } from "@zogal/auth-permissions";
 import {
-  IconAdjustments, IconAlertTriangle, IconBuildingStore, IconChartBar, IconCreditCard, IconDeviceDesktop,
+  IconAdjustments, IconAlertTriangle, IconBuildingStore, IconChartBar, IconCreditCard, IconTag, IconDeviceDesktop,
   IconLayoutDashboard, IconReceiptTax, IconSettings, IconUsers, type Icon,
 } from "@tabler/icons-react";
 
@@ -11,7 +11,7 @@ import {
  *                nothing shop-specific, platform admins only.
  */
 export type ShopPage = "overview" | "reports" | "staff" | "devices" | "tax" | "conflicts" | "subscription" | "settings";
-export type AdminPage = "shops" | "platform" | "ops";
+export type AdminPage = "shops" | "pricing" | "platform" | "ops";
 
 export interface NavItem<K extends string> { key: K; label: string; icon: Icon; anyOf?: Permission[] }
 
@@ -28,6 +28,7 @@ export const SHOP_NAV: NavItem<ShopPage>[] = [
 
 export const ADMIN_NAV: NavItem<AdminPage>[] = [
   { key: "shops", label: "Shops", icon: IconBuildingStore },
+  { key: "pricing", label: "Pricing", icon: IconTag },
   { key: "platform", label: "Platform settings", icon: IconAdjustments },
   { key: "ops", label: "Operational settings", icon: IconSettings },
 ];

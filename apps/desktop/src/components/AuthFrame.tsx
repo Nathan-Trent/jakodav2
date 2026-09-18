@@ -14,7 +14,7 @@ export function AuthFrame({ children }: { children: ReactNode }) {
         <LeafField count={9} />
         <div className="relative flex items-center gap-2.5">
           <ZogalMark size={34} />
-          <span className="text-title">Zogal <span className="text-white/60 font-semibold">ERP</span></span>
+          <span className="text-title">Doka <span className="text-white/60 font-semibold">by Zogal</span></span>
         </div>
         <div className="relative mt-auto grid gap-3 max-w-sm">
           <h2 className="text-display">Know your numbers. Every day.</h2>

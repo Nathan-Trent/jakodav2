@@ -40,7 +40,7 @@ export function AppShell({ page, onNavigate, children }: { page: PageKey; onNavi
     <div className={cn("h-full grid transition-[grid-template-columns] duration-200", collapsed ? "grid-cols-[68px_minmax(0,1fr)]" : "grid-cols-[232px_minmax(0,1fr)]")}>
       <aside className="bg-sidebar text-sidebar-foreground flex flex-col overflow-hidden">
         <div className={cn("flex items-center pt-5 pb-4", collapsed ? "justify-center px-0" : "justify-between px-5")}>
-          {collapsed ? <ZogalMark size={30} /> : <ZogalLockup size={32} sub="ERP" />}
+          {collapsed ? <ZogalMark size={30} /> : <ZogalLockup size={32} />}
           {!collapsed && <CollapseButton collapsed={collapsed} onClick={() => setCollapsed(true)} />}
         </div>
         {collapsed && <div className="flex justify-center pb-2"><CollapseButton collapsed onClick={() => setCollapsed(false)} /></div>}

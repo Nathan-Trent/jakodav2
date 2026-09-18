@@ -30,11 +30,20 @@ Installed copies update themselves. Nothing is built on a developer machine.
        git tag v0.2.0
        git push origin v0.2.0
 
-3. GitHub Actions builds the Windows installer (~15 min), signs it, and publishes
+3. GitHub Actions builds the Windows installer and both Mac apps (~20 min), signs it, and publishes
    Release `v0.2.0` with `latest.json`. Installed apps see it within 6 hours
    (or on next launch) and offer "Update and restart".
 
-First install on a new machine: download the `.exe` from the latest Release.
+First install on a new machine: download the `.exe` (Windows) or `.dmg` (Mac — Apple Silicon or Intel) from the latest Release.
+
+## macOS
+
+Builds run for both Apple Silicon and Intel. Until an Apple Developer ID
+(US$99/yr) is set up they are UNSIGNED: on first open, right-click the app →
+Open → Open. The auto-updater still works (it verifies our own signature).
+To sign and notarise so it opens normally, add these repository secrets and
+nothing else changes: `APPLE_CERTIFICATE` (base64 .p12), `APPLE_CERTIFICATE_PASSWORD`,
+`APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` (app-specific), `APPLE_TEAM_ID`.
 
 # Web deployments (Vercel)
 

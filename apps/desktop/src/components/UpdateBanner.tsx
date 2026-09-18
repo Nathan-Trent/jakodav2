@@ -13,7 +13,7 @@ export function UpdateBanner() {
   return (
     <div className="px-8 pt-5">
       {state.status === "available" && (
-        <Alert tone="info" title={`Zogal ${state.version} is available`}
+        <Alert tone="info" title={`Doka ${state.version} is available`}
           action={<div className="flex gap-2"><Button size="sm" variant="ghost" onClick={dismiss}>Later</Button><Button size="sm" onClick={() => void install()}><IconDownload size={14} /> Update and restart</Button></div>}>
           Takes about a minute. Finish any sale in progress first — the app restarts when done.{state.notes ? ` What's new: ${state.notes}` : ""}
         </Alert>

@@ -5,7 +5,7 @@ import { LeafField, ZogalMark } from "@zogal/ui";
  * Frame for pre-shell screens (login, setup). Forest brand panel on the
  * left carries the product's promise; the form sits on near-white.
  */
-export function AuthFrame({ children, sub = "Business" }: { children: ReactNode; sub?: string }) {
+export function AuthFrame({ children, sub = "by Zogal" }: { children: ReactNode; sub?: string }) {
   return (
     <div className="min-h-full grid md:grid-cols-[minmax(300px,2fr)_minmax(0,3fr)]">
       <aside className="relative bg-brand-forest text-white p-6 md:p-10 flex flex-col overflow-hidden min-h-[180px] md:min-h-0">
@@ -14,7 +14,7 @@ export function AuthFrame({ children, sub = "Business" }: { children: ReactNode;
         <LeafField count={9} />
         <div className="relative flex items-center gap-2.5">
           <ZogalMark size={34} />
-          <span className="text-title">Zogal <span className="text-white/60 font-semibold">{sub}</span></span>
+          <span className="text-title">Doka <span className="text-white/60 font-semibold">{sub}</span></span>
         </div>
         <div className="relative mt-auto grid gap-3 max-w-sm hidden md:grid">
           <h2 className="text-display">Know your numbers. Every day.</h2>

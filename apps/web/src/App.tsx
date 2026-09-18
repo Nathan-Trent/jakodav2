@@ -15,6 +15,7 @@ import { SettingsScreen } from "@/screens/SettingsScreen";
 import { AdminShopsScreen } from "@/screens/admin/AdminShopsScreen";
 import { AdminPlatformScreen } from "@/screens/admin/AdminPlatformScreen";
 import { AdminOpsScreen } from "@/screens/admin/AdminOpsScreen";
+import { AdminPricingScreen } from "@/screens/admin/AdminPricingScreen";
 
 export function App() {
   const admin = isAdminPath(location.pathname);
@@ -87,6 +88,7 @@ function AdminRouter() {
   }
   let content: React.ReactNode;
   switch (page) {
+    case "pricing": content = <AdminPricingScreen />; break;
     case "platform": content = <AdminPlatformScreen />; break;
     case "ops": content = <AdminOpsScreen />; break;
     default: content = <AdminShopsScreen />;

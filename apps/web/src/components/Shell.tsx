@@ -16,7 +16,7 @@ export function Shell<K extends string>({ items, page, onNavigate, variant, chil
 }) {
   const { ctx, active, admin, setActiveShop, signOut } = useSession();
   const [open, setOpen] = useState(false);
-  const sub = variant === "admin" ? "Back office" : "Business";
+  const sub = variant === "admin" ? "Back office" : "by Zogal";
 
   const menu = (
     <>
