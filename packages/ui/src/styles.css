@@ -3,7 +3,7 @@
 @import "@fontsource-variable/manrope";
 
 /* ============================================================
-   Zogal ERP design system — Zogal's system applied to a different brand.
+   Doka design system — Zogal's rules, Doka's colours (ink, coral, paper). Token NAMES kept; VALUES are Doka's. No leaves: the ornament is the rule and the stamp.
    Source of truth for the rules: zogal.app/docs/design_system.md.
 
    Palette: the green hierarchy, used by job, never by taste:
@@ -18,14 +18,14 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --jk-forest: #062C1A;
-  --jk-deep-green: #104E2F;
-  --jk-action-green: #16A34A;
-  --jk-signal-green: #4ADE80;
-  --jk-soft-mint: #C6E5D5;
-  --jk-near-white: #F8FAF9;
-  --jk-ink: #101418;
-  --jk-muted: #66706B;
+  --jk-forest: #0E1B2B;        /* ink */
+  --jk-deep-green: #1B3350;    /* deep ink */
+  --jk-action-green: #E0563F;  /* coral: the thing you tap */
+  --jk-signal-green: #FFB4A3;  /* coral on ink */
+  --jk-soft-mint: #F8CFC6;     /* coral tint */
+  --jk-near-white: #FBF8F1;    /* paper */
+  --jk-ink: #14181C;
+  --jk-muted: #6B6760;
 
   /* Type scale (Manrope) */
   --text-display: 40px;
@@ -77,68 +77,68 @@
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-xl: 20px;
-  --shadow-elev-1: 0 1px 2px rgb(6 44 26 / 0.06), 0 2px 6px rgb(6 44 26 / 0.05);
-  --shadow-elev-2: 0 4px 8px rgb(6 44 26 / 0.06), 0 14px 30px rgb(6 44 26 / 0.08);
-  --shadow-elev-3: 0 8px 16px rgb(6 44 26 / 0.10), 0 24px 48px rgb(6 44 26 / 0.12);
-  --shadow-action: 0 4px 14px rgb(22 163 74 / 0.35);
+  --shadow-elev-1: 0 1px 2px rgb(14 27 43 / 0.06), 0 2px 6px rgb(14 27 43 / 0.05);
+  --shadow-elev-2: 0 4px 8px rgb(14 27 43 / 0.06), 0 14px 30px rgb(14 27 43 / 0.08);
+  --shadow-elev-3: 0 8px 16px rgb(14 27 43 / 0.10), 0 24px 48px rgb(14 27 43 / 0.12);
+  --shadow-action: 0 4px 14px rgb(224 86 63 / 0.35);
 }
 
 @layer base {
   :root {
-    --background: 160 12% 98%;
-    --foreground: 213 12% 8%;
+    --background: 42 56% 97%;
+    --foreground: 210 15% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 213 12% 8%;
+    --card-foreground: 210 15% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 213 12% 8%;
-    /* primary = Action Green: the thing you tap */
-    --primary: 142 76% 36%;
+    --popover-foreground: 210 15% 9%;
+    /* primary = coral: the thing you tap */
+    --primary: 9 72% 56%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 155 20% 96%;
-    --secondary-foreground: 213 12% 8%;
-    --muted: 155 20% 96%;
-    --muted-foreground: 150 4% 42%;
-    --accent: 155 20% 94%;
-    --accent-foreground: 213 12% 8%;
+    --secondary: 40 40% 95%;
+    --secondary-foreground: 210 15% 9%;
+    --muted: 40 40% 95%;
+    --muted-foreground: 40 5% 40%;
+    --accent: 40 40% 93%;
+    --accent-foreground: 210 15% 9%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 155 14% 90%;
-    --input: 155 14% 90%;
-    --ring: 142 76% 36%;
+    --border: 40 20% 88%;
+    --input: 40 20% 88%;
+    --ring: 9 72% 56%;
     --status-green: 22 163 74;
     --status-amber: 234 179 8;
     --status-red: 239 68 68;
-    /* Sidebar is Forest — the brand foundation holds the frame */
-    --sidebar: 152 76% 10%;
-    --sidebar-foreground: 160 12% 98%;
-    --sidebar-muted: 150 15% 70%;
-    --sidebar-active: 141 68% 65%;
+    /* Sidebar is ink — the frame holds structure */
+    --sidebar: 213 51% 11%;
+    --sidebar-foreground: 42 56% 97%;
+    --sidebar-muted: 213 20% 70%;
+    --sidebar-active: 12 100% 82%;
   }
 
   .dark {
-    --background: 152 76% 10%;
-    --foreground: 160 12% 98%;
-    --card: 152 65% 14%;
-    --card-foreground: 160 12% 98%;
-    --popover: 152 65% 14%;
-    --popover-foreground: 160 12% 98%;
-    --primary: 141 68% 65%;
-    --primary-foreground: 152 76% 10%;
-    --secondary: 152 55% 18%;
-    --secondary-foreground: 160 12% 98%;
-    --muted: 152 55% 18%;
-    --muted-foreground: 150 15% 70%;
-    --accent: 152 55% 18%;
-    --accent-foreground: 160 12% 98%;
+    --background: 213 51% 11%;
+    --foreground: 42 56% 97%;
+    --card: 213 45% 15%;
+    --card-foreground: 42 56% 97%;
+    --popover: 213 45% 15%;
+    --popover-foreground: 42 56% 97%;
+    --primary: 12 100% 82%;
+    --primary-foreground: 213 51% 11%;
+    --secondary: 213 40% 19%;
+    --secondary-foreground: 42 56% 97%;
+    --muted: 213 40% 19%;
+    --muted-foreground: 213 20% 70%;
+    --accent: 213 40% 19%;
+    --accent-foreground: 42 56% 97%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 152 48% 22%;
-    --input: 152 48% 22%;
-    --ring: 141 68% 65%;
-    --sidebar: 152 80% 7%;
-    --sidebar-foreground: 160 12% 98%;
-    --sidebar-muted: 150 15% 60%;
-    --sidebar-active: 141 68% 65%;
+    --border: 213 35% 23%;
+    --input: 213 35% 23%;
+    --ring: 12 100% 82%;
+    --sidebar: 213 55% 8%;
+    --sidebar-foreground: 42 56% 97%;
+    --sidebar-muted: 213 20% 60%;
+    --sidebar-active: 12 100% 82%;
   }
 
   * { @apply border-border outline-ring/50; -webkit-tap-highlight-color: transparent; }
@@ -173,10 +173,14 @@
   /* Card press: physical, 0.18s, no blur */
   .pressable { transition: transform 0.18s ease, box-shadow 0.18s ease; }
   .pressable:active { transform: translateY(1px) scale(0.982); box-shadow: var(--shadow-elev-1); }
+  /* Doka ornament: the ledger rule and the stamp. */
+  .rule { border-top: 1px solid hsl(var(--border)); }
+  .rule-strong { border-top: 2px solid var(--jk-forest); }
+  .stamp { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid currentColor; border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; transform: rotate(-2deg); }
 }
 
 /* ============================================================
-   Brand motion — the breathing mark and the drifting leaves.
+   Brand motion — the breathing mark.
    Transform + opacity only, so both stay on the compositor.
    ============================================================ */
 @keyframes zogal-breathe {
@@ -185,15 +189,8 @@
   66%      { opacity: 0.75; transform: rotate(-8deg) scale(0.98); }
 }
 
-@keyframes zogal-leaf-fall {
-  0%   { transform: translate3d(0, -12vh, 0) rotate(0deg); }
-  100% { transform: translate3d(var(--leaf-drift, 0px), 112vh, 0) rotate(var(--leaf-spin, 180deg)); }
-}
 
 @media (prefers-reduced-motion: reduce) {
-  /* The mark holds still and the leaves stop falling; nothing is lost but the
-     movement, and motion sensitivity is not a preference to override. */
-  .animate-\[zogal-breathe_2\.4s_ease-in-out_infinite\],
-  .animate-\[zogal-leaf-fall_linear_infinite\] { animation: none !important; }
-  .animate-\[zogal-leaf-fall_linear_infinite\] { opacity: 0.12 !important; transform: translate3d(0, 40vh, 0); }
+  /* The mark holds still; motion sensitivity is not a preference to override. */
+  .animate-\[zogal-breathe_2\.4s_ease-in-out_infinite\] { animation: none !important; }
 }

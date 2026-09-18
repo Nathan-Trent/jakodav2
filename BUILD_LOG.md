@@ -519,6 +519,15 @@ Status: BUILT — `0015_pricing_pos_web.sql` NOT YET APPLIED.
 - Release workflow now builds macOS (arm64 + x86_64) alongside Windows;
   unsigned until Apple Developer secrets exist (docs/RELEASING.md).
 
+## Doka brand across all properties (Nathan, 2026-09-18)
+Status: DONE. One Doka look: business.getzogal.com/doka, doka.zogal.app
+(+ /admin), the desktop till, the partner web till. `@zogal/ui` tokens
+re-valued (names kept): ink frame/sidebar, coral action, coral tint,
+paper ground; ornament = rule + stamp; leaves and LeafField removed;
+`AuthCover` replaces the leafy auth panel in both apps. Desktop 0.3.0.
+Marketing repo: Zogal Business = ink + amber prospectus; Doka = coral
+product sheet; per-product accent via `data-product`.
+
 ## Scheduled: temporary partner web build (Nathan, 2026-09-12)
 At the END of the build sequence: host the same app as a web build (it is a
 Vite app inside Tauri already) so a partner can sign up and test without

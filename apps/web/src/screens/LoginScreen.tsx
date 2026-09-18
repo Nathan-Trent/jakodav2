@@ -31,7 +31,7 @@ export function LoginScreen({ variant = "shop" }: { variant?: "shop" | "admin" }
   }
 
   return (
-    <AuthFrame sub={variant === "admin" ? "Back office" : "by Zogal"}>
+    <AuthFrame sub={variant === "admin" ? "Back office" : "by Zogal"} {...(variant === "admin" ? { title: "Every shop, every plan, every switch." } : {})}>
       <Card className="w-full max-w-sm elev-3">
         <CardHeader>
           <CardTitle className="text-heading">{variant === "admin" ? "Doka back office" : "Welcome back"}</CardTitle>
