@@ -41,7 +41,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "REPLACE_WITH_UPDATER_PUBLIC_KEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM4NDFBRTRGMUQxQkUzRjgKUldUNDR4c2RUNjVCeUtlNjQwekpHa3RZQTRwOHNFbXdqMnA1ZHhOL0toWE9ZbjJzSHZISWpwZTYK",
       "endpoints": [
         "https://github.com/Nathan-Trent/jakodav2/releases/latest/download/latest.json"
       ],

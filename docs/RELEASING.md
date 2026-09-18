@@ -13,7 +13,7 @@ Installed copies update themselves. Nothing is built on a developer machine.
    can never accept another update.
 
 2. Paste the PUBLIC key into `apps/desktop/src-tauri/tauri.conf.json` →
-   `plugins.updater.pubkey` (replace `REPLACE_WITH_UPDATER_PUBLIC_KEY`). Commit.
+   `plugins.updater.pubkey` (replace `the public key (set 2026-09-18)`). Commit.
 
 3. GitHub → repo → Settings → Secrets and variables → Actions → New repository secret:
    - `TAURI_SIGNING_PRIVATE_KEY` — the whole contents of the private key file
