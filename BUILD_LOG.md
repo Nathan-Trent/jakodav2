@@ -528,6 +528,13 @@ paper ground; ornament = rule + stamp; leaves and LeafField removed;
 Marketing repo: Zogal Business = ink + amber prospectus; Doka = coral
 product sheet; per-product accent via `data-product`.
 
+## Release pipeline — LIVE (2026-09-18)
+v0.3.0 (Windows) and v0.3.1 (Windows + macOS arm64/x86_64, unsigned) built
+and published by GitHub Actions from tags. Updater public key in
+tauri.conf.json; private key in GitHub secrets only. Installed tills
+update themselves. Fix in v0.3.1: Apple signing vars exported only when
+the certificate secret exists.
+
 ## Scheduled: temporary partner web build (Nathan, 2026-09-12)
 At the END of the build sequence: host the same app as a web build (it is a
 Vite app inside Tauri already) so a partner can sign up and test without
