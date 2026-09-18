@@ -9,14 +9,14 @@ import { cn } from "../../lib/utils.js";
  */
 const ROWS: [string, string, string][] = [
   ["08:12", "Opening stock counted", "412 units"],
-  ["09:40", "Delivery · Peak Milk × 48", "₦86,400"],
+  ["09:40", "Delivery · full cream milk × 48", "₦86,400"],
   ["12:05", "Sales so far · 31 receipts", "₦118,300"],
   ["15:30", "Expense · generator diesel", "₦9,000"],
   ["18:55", "Closing · takings", "₦184,500"],
   ["", "Profit after cost & expenses", "₦41,200"],
 ];
 
-export function AuthCover({ sub = "by Zogal", stamp = "Product 01", title = "The till that knows your profit.", line, className, dayBook = true }: {
+export function AuthCover({ sub = "by Zogal", stamp = "Doka", title = "The till that knows your profit.", line, className, dayBook = true }: {
   sub?: string; stamp?: string; title?: string; line?: string; className?: string; dayBook?: boolean;
 }) {
   return (
