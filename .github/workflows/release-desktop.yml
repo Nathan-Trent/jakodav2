@@ -34,9 +34,9 @@ jobs:
             args: "--target x86_64-apple-darwin"
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -51,6 +51,24 @@ jobs:
 
       - run: npm ci
 
+      # macOS signing is optional. Tauri signs whenever APPLE_CERTIFICATE is
+      # merely PRESENT, so an empty secret must not be exported at all —
+      # exporting it broke the first Mac build. Set the variables only when
+      # Nathan has added an Apple Developer certificate.
+      - name: Enable Apple signing (only if secrets exist)
+        if: runner.os == 'macOS' && env.HAS_CERT != ''
+        env:
+          HAS_CERT: ${{ secrets.APPLE_CERTIFICATE }}
+        run: |
+          {
+            echo "APPLE_CERTIFICATE=${{ secrets.APPLE_CERTIFICATE }}"
+            echo "APPLE_CERTIFICATE_PASSWORD=${{ secrets.APPLE_CERTIFICATE_PASSWORD }}"
+            echo "APPLE_SIGNING_IDENTITY=${{ secrets.APPLE_SIGNING_IDENTITY }}"
+            echo "APPLE_ID=${{ secrets.APPLE_ID }}"
+            echo "APPLE_PASSWORD=${{ secrets.APPLE_PASSWORD }}"
+            echo "APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}"
+          } >> "$GITHUB_ENV"
+
       - name: Build and publish
         uses: tauri-apps/tauri-action@v0
         env:
@@ -60,13 +78,6 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUBSCRIPTION_PUBLIC_KEY: ${{ secrets.VITE_SUBSCRIPTION_PUBLIC_KEY }}
-          # macOS signing/notarisation — optional; builds are unsigned when absent.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           args: ${{ matrix.args }}
           projectPath: apps/desktop
