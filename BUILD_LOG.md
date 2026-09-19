@@ -643,6 +643,23 @@ Done 2026-09-20 — main app:
   assumed, "Paid by: Cash — change" in the cart) or required (cashier must
   pick; button reads "Choose how they paid"). Set in Settings on both apps.
 
+## Release pipeline bug + version display (Nathan, 2026-09-20)
+Nathan hit "Couldn't check for updates — None of the fallback platforms
+['windows-x86_64-nsis', 'windows-x86_64'] were found" on an old install, and
+flagged that a raw error like that should never reach a user. Root cause:
+the Windows/Mac-arm/Mac-intel builds ran in parallel and each published
+straight to the live "latest" GitHub release as it finished — so for the
+several minutes between the first build landing and the last, the public
+release (and its latest.json) was incomplete, and any app or the marketing
+site checking during that window saw it. Fixed: builds now publish to a
+DRAFT release; a final `publish` job undrafts it only once all three have
+landed, so nothing sees a half-built release. Also: a failed update check
+shows one plain sentence (`friendlyUpdateError`) instead of the exception
+text. Both apps now show their release number in the sidebar footer
+(desktop "Doka 0.3.8" / collapsed "v0.3.8"; web "Doka 0.3.8 · web"), read at
+build time from tauri.conf.json so the two surfaces can't disagree.
+v0.3.8 tagged and pushed; GitHub Actions building.
+
 ### Parked (pick up later — do not lose)
 - Self-service plan change from the dashboard (today: Zogal raises invoice).
 - §8.1 tax rules verification page; Nielsen/Norman pass on every screen.
