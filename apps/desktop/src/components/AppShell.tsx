@@ -41,14 +41,14 @@ export function AppShell({ page, onNavigate, children }: { page: PageKey; onNavi
 
   return (
     <div className={cn("h-full grid transition-[grid-template-columns] duration-200", collapsed ? "grid-cols-[68px_minmax(0,1fr)]" : "grid-cols-[232px_minmax(0,1fr)]")}>
-      <aside className="bg-sidebar text-sidebar-foreground flex flex-col overflow-hidden">
+      <aside className="bg-sidebar text-sidebar-foreground flex flex-col overflow-hidden h-screen">
         <div className={cn("flex items-center pt-5 pb-4", collapsed ? "justify-center px-0" : "justify-between px-5")}>
           {collapsed ? <ZogalMark size={30} /> : <ZogalLockup size={32} />}
           {!collapsed && <CollapseButton collapsed={collapsed} onClick={() => setCollapsed(true)} />}
         </div>
         {collapsed && <div className="flex justify-center pb-2"><CollapseButton collapsed onClick={() => setCollapsed(false)} /></div>}
 
-        <nav className={cn("grid gap-0.5", collapsed ? "px-2.5" : "px-3")}>
+        <nav className={cn("grid gap-0.5 content-start min-h-0 overflow-y-auto", collapsed ? "px-2.5" : "px-3")}>
           {nav.map((n) => {
             const activeItem = n.key === page;
             return (
@@ -73,7 +73,7 @@ export function AppShell({ page, onNavigate, children }: { page: PageKey; onNavi
           })}
         </nav>
 
-        <div className={cn("mt-auto border-t border-white/10 grid gap-3", collapsed ? "px-2.5 py-4 justify-items-center" : "px-5 py-4")}>
+        <div className={cn("mt-auto shrink-0 border-t border-white/10 grid gap-2.5", collapsed ? "px-2.5 py-3 justify-items-center" : "px-5 py-3")}>
           {/* SYNC: connection, unsent work and gate state — always visible */}
           <SyncBadge collapsed={collapsed} />
 
