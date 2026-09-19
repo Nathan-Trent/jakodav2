@@ -13,6 +13,9 @@ import { TaxScreen } from "@/screens/TaxScreen";
 import { ConflictsScreen } from "@/screens/ConflictsScreen";
 import { SubscriptionScreen } from "@/screens/SubscriptionScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
+import { PlanLockedScreen } from "@/screens/PlanLockedScreen";
+import { useEntitlements } from "@/lib/entitlements";
+import { featureEnabled } from "@zogal/shared";
 
 export function App() {
   const admin = isAdminPath(location.pathname);
@@ -38,6 +41,7 @@ function usePath<K extends string>(fromPath: (p: string) => K, toPath: (k: K) =>
 function ShopRouter() {
   const { status, active, signOut, refresh } = useSession();
   const [page, navigate] = usePath<ShopPage>(shopPageFromPath, shopPath);
+  const entitlements = useEntitlements();
 
   if (status === "loading") return <LoadingMark label="Starting up…" />;
   if (status === "signed-out") return <LoginScreen />;
@@ -46,7 +50,9 @@ function ShopRouter() {
   const allowed = visibleShopNav(active.permissions);
   const current = allowed.find((n) => n.key === page) ?? allowed[0]!;
   let content: React.ReactNode;
-  switch (current.key) {
+  // 0027: the plan doesn't include this section — explain, don't hide.
+  if (current.feature && !featureEnabled(entitlements, current.feature)) content = <PlanLockedScreen label={current.label} />;
+  else switch (current.key) {
     case "reports": content = <ReportsScreen />; break;
     case "staff": content = <StaffScreen />; break;
     case "devices": content = <DevicesScreen />; break;

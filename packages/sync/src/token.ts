@@ -10,6 +10,8 @@
  * "assume active": an unverifiable token must mean less access, not more.
  */
 
+import type { Entitlements } from "@zogal/shared";
+
 export interface SubscriptionPayload {
   v: number;
   device_id: string;
@@ -18,6 +20,13 @@ export interface SubscriptionPayload {
   plan: string;
   expires_at: string | null;
   policy: { grace_days: number; read_only_days: number; mandatory_sync_days: number; sync_warning_days: number };
+  /**
+   * 0027: the plan's entitlements and whether THIS terminal counts. Absent on
+   * tokens minted before 0027 → everything enabled, standing ok. Signed with
+   * the rest, so a terminal can't grant itself a feature offline.
+   */
+  entitlements?: Entitlements;
+  standing?: "ok" | "over_limit";
   issued_at: string;
   token_expires_at: string;
 }

@@ -38,13 +38,15 @@ export interface GateInput {
   lastSyncServerTime: Date | null;
   /** False when the token failed signature/shape checks, or there is none. */
   tokenValid: boolean;
+  /** 0027: from the token; undefined on pre-0027 tokens = ok. */
+  standing?: "ok" | "over_limit" | undefined;
   policy: GatePolicy;
 }
 
 export interface GateDecision {
   level: GateLevel;
   /** Primary cause, for the message shown to the user. */
-  reason: "ok" | "never_synced" | "sync_overdue" | "subscription_expired" | "subscription_cancelled" | "token_invalid";
+  reason: "ok" | "never_synced" | "sync_overdue" | "subscription_expired" | "subscription_cancelled" | "token_invalid" | "terminal_over_limit";
   /** Plain-language headline. */
   title: string;
   /** What the user can do about it. */
@@ -92,6 +94,14 @@ export function evaluateGate(input: GateInput): GateDecision {
     return gate("full", "token_invalid", "Subscription not verified",
                 "This terminal is working normally. If this keeps showing, the subscription key needs attention.",
                 null, true);
+  }
+
+  // 0027: this terminal is beyond the plan's limit (a downgrade, or a
+  // terminal activated while another was pending). It may look, not sell,
+  // until the owner revokes one or upgrades. The server refuses its sales too.
+  if (input.standing === "over_limit") {
+    return gate("read_only", "terminal_over_limit", "This terminal is beyond your plan's limit",
+                "Revoke another terminal from the dashboard, or upgrade your plan, then sync.", null, false);
   }
 
   if (input.status === "cancelled") {

@@ -11,6 +11,7 @@ import { PaymentTypePicker } from "@/components/PaymentTypePicker";
 import { Alert, Button, Card, CardContent, ConfirmDialog, NumberField, Label, Separator, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
 import { StaleNotice } from "@/components/StaleNotice";
 import { heldAgo, loadHeld, saveHeld, type HeldSale } from "@/lib/heldSales";
+import { useFeature } from "@/lib/entitlements";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import type { OfflineCustomerRef } from "@/lib/shopView";
@@ -50,6 +51,7 @@ export function PosScreen() {
   const perms = active!.permissions;
   const can = (p: (typeof perms)[number]) => perms.includes(p);
   const viewCost = can("items.view_cost");
+  const customersOn = useFeature("customers");   // 0027: plan may not include customers
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [busy, setBusy] = useState(false);
@@ -344,7 +346,7 @@ export function PosScreen() {
               })}
             </div>
           )}
-          <CustomerPicker value={customer} onChange={setCustomer} disabled={busy || !can("sales.create")} />
+          {customersOn && <CustomerPicker value={customer} onChange={setCustomer} disabled={busy || !can("sales.create")} />}
           {cart.length === 0 && (
             <div className="text-sm text-muted-foreground flex items-center gap-2">
               <IconBarcode size={16} /> Scan a barcode or tap an item to add it.

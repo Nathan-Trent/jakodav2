@@ -27,6 +27,12 @@ export function friendlyError(e: unknown): FriendlyError {
     // Plan gating (0017): the plan's limit was reached at activation or invite.
     return { title: "Your plan is full", detail: m[1]!.replace(/\.?$/, "."), action: "Upgrade from Subscription, or free a seat." };
   }
+  if ((m = raw.match(/subscription_locked: (.+)/))) {
+    return { title: "Subscription expired", detail: m[1]!, action: "Renew from the web dashboard under Subscription." };
+  }
+  if ((m = raw.match(/rate_limited: (.+)/))) {
+    return { title: "Slow down a moment", detail: m[1]!, action: "Wait a few seconds and try again." };
+  }
   if (/invalid PIN/i.test(raw)) return { title: "PIN not recognised", action: "Ask the manager to check their current PIN in their own login — PINs rotate weekly." };
   if (/too many failed PIN attempts/i.test(raw)) return { title: "Too many PIN attempts", action: "Wait 15 minutes, then try again." };
   if (/invalid or expired activation code/i.test(raw)) return { title: "Activation code not valid", action: "Codes last 10 minutes. Ask the owner to generate a new one." };

@@ -103,3 +103,15 @@ describe("evaluateGate — trust", () => {
     expect(d.reason).toBe("sync_overdue");
   });
 });
+
+describe("evaluateGate — plan entitlements (0027)", () => {
+  it("a terminal beyond the plan's limit is read-only, whatever else is fine", () => {
+    const d = evaluateGate(input({ standing: "over_limit" }));
+    expect(d.level).toBe("read_only");
+    expect(d.reason).toBe("terminal_over_limit");
+  });
+  it("a token minted before 0027 (no standing) changes nothing", () => {
+    expect(evaluateGate(input({})).level).toBe("full");
+    expect(evaluateGate(input({ standing: "ok" })).level).toBe("full");
+  });
+});

@@ -4,10 +4,15 @@ import { PageHeader, Page } from "@/components/Shell";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 import { useAsync } from "@/lib/useAsync";
+import type { Entitlement, FeatureCatalogueRow } from "@zogal/shared";
 
 interface Sub { status: "active" | "past_due" | "cancelled"; plan: string; expires_at: string | null; auto_renew: boolean }
 interface Card { id: string; provider: string; brand: string | null; last4: string | null; exp_month: number | null; exp_year: number | null }
-interface Usage { plan: string | null; limits: { terminals?: number; staff?: number }; terminals: number; staff: number }
+interface Usage {
+  plan: string | null; limits: { terminals?: number; staff?: number }; terminals: number; staff: number;
+  /** 0027: every catalogue feature with the plan's answer and current usage. */
+  entitlements: Record<string, Entitlement & { used?: number }>;
+}
 interface Invoice { id: string; number: string; plan_key: string; period_start: string; period_end: string; amount: number; currency: string; status: "unpaid" | "paid" | "void"; provider: string | null; paid_at: string | null; created_at: string }
 interface Plan { key: string; name: string; tagline: string | null; price_monthly: number; price_yearly: number | null; features: string[]; limits: { terminals?: number; staff?: number }; highlight: boolean }
 
@@ -28,19 +33,21 @@ export function SubscriptionScreen() {
 
   const data = useAsync(async () => {
     const db = getSupabase();
-    const [s, u, inv, plans, cards] = await Promise.all([
+    const [s, u, inv, plans, cards, catalogue] = await Promise.all([
       db.from("subscriptions").select("status, plan, expires_at, auto_renew").eq("shop_id", shop.id).single<Sub>(),
       db.rpc("shop_plan_usage", { p_shop_id: shop.id }),
       db.from("invoices").select("id, number, plan_key, period_start, period_end, amount, currency, status, provider, paid_at, created_at").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(24),
       db.from("pricing_plans").select("key, name, tagline, price_monthly, price_yearly, features, limits, highlight").eq("product", "doka").eq("is_visible", true).order("sort_order"),
       db.from("payment_methods_view").select("id, provider, brand, last4, exp_month, exp_year").eq("shop_id", shop.id).order("created_at", { ascending: false }),
+      db.from("feature_catalogue").select("product, key, name, description, kind, unit, sort_order").eq("product", "doka").order("sort_order"),
     ]);
+    if (catalogue.error) throw catalogue.error;
     if (s.error) throw s.error;
     if (u.error) throw u.error;
     if (inv.error) throw inv.error;
     if (plans.error) throw plans.error;
     if (cards.error) throw cards.error;
-    return { sub: s.data, usage: u.data as Usage, invoices: (inv.data ?? []) as Invoice[], plans: (plans.data ?? []) as Plan[], cards: (cards.data ?? []) as Card[] };
+    return { sub: s.data, usage: u.data as Usage, invoices: (inv.data ?? []) as Invoice[], plans: (plans.data ?? []) as Plan[], cards: (cards.data ?? []) as Card[], catalogue: (catalogue.data ?? []) as FeatureCatalogueRow[] };
   }, [shop.id, tick]);
 
   // Back from checkout: ?invoice=&provider=&reference=(&transaction_id=) → confirm with Zogal's server.
@@ -146,8 +153,12 @@ export function SubscriptionScreen() {
             <Card className="py-5 gap-0"><CardContent className="px-5 grid gap-1">
               <div className="text-micro text-muted-foreground">In use</div>
               <div className="grid gap-1 mt-1 text-small">
-                <UsageLine label="Terminals" used={d.usage.terminals} limit={d.usage.limits?.terminals} />
-                <UsageLine label="Staff" used={d.usage.staff} limit={d.usage.limits?.staff} />
+                {d.catalogue.map((f) => {
+                  const e = d.usage.entitlements?.[f.key] ?? { enabled: true };
+                  if (f.kind === "toggle") return <div key={f.key} className={e.enabled ? "" : "text-muted-foreground"}>{f.name}: {e.enabled ? "included" : "not included"}</div>;
+                  if (!e.enabled) return <div key={f.key} className="text-muted-foreground">{f.name}: not included</div>;
+                  return <UsageLine key={f.key} label={f.name} used={e.used ?? 0} limit={e.quantity ?? undefined} period={f.kind === "quota" ? (e.period ?? "month") : undefined} />;
+                })}
               </div>
               <div className="flex gap-1 mt-1">{days !== null && days < 0 ? <Badge variant="warning">In grace / read-only window</Badge> : <Badge variant="success">Full use</Badge>}</div>
             </CardContent></Card>
@@ -228,9 +239,9 @@ export function SubscriptionScreen() {
   );
 }
 
-function UsageLine({ label, used, limit }: { label: string; used: number; limit: number | undefined }) {
+function UsageLine({ label, used, limit, period }: { label: string; used: number; limit: number | undefined; period?: string | undefined }) {
   const full = limit !== undefined && used >= limit;
-  return <div className={full ? "text-status-red font-medium" : ""}>{label}: {used} of {limit ?? "unlimited"}{full ? " — full" : ""}</div>;
+  return <div className={full ? "text-status-red font-medium" : ""}>{label}: {used} of {limit ?? "unlimited"}{period ? ` this ${period}` : ""}{full ? " — full" : ""}</div>;
 }
 
 function planName(plans: Plan[], key: string) { return plans.find((p) => p.key === key)?.name ?? key; }

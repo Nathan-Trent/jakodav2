@@ -284,6 +284,7 @@ export class SyncEngine {
       elapsedSinceSyncSeconds: elapsedSinceSync(this.clock),
       lastSyncServerTime: this.clock.lastSyncServerTime ? new Date(this.clock.lastSyncServerTime) : null,
       tokenValid: this.tokenValid,
+      standing: this.payload?.standing,
       policy,
     });
   }

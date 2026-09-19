@@ -18,6 +18,9 @@ import { PurchasesScreen } from "@/screens/PurchasesScreen";
 import { ExpensesScreen } from "@/screens/ExpensesScreen";
 import { TaxScreen } from "@/screens/TaxScreen";
 import { ComingSoonScreen } from "@/screens/ComingSoonScreen";
+import { PlanLockedScreen } from "@/screens/PlanLockedScreen";
+import { useEntitlements } from "@/lib/entitlements";
+import { featureEnabled } from "@zogal/shared";
 import { StaffScreen } from "@/screens/StaffScreen";
 import { ReportsScreen } from "@/screens/ReportsScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
@@ -47,6 +50,7 @@ export function App() {
 function Router() {
   const { status, active, device, refresh, signOut } = useSession();
   const { gate } = useSync();
+  const entitlements = useEntitlements();
   const [page, setPage] = useState<PageKey>("dashboard");
 
   // device is undefined until the one-time read of the OS credential store
@@ -67,6 +71,8 @@ function Router() {
 
   let content: React.ReactNode;
   if (current.comingIn) content = <ComingSoonScreen item={current} />;
+  // 0027: the plan doesn't include this section — explain, don't hide.
+  else if (current.feature && !featureEnabled(entitlements, current.feature)) content = <PlanLockedScreen item={current} />;
   else if (current.key === "conflicts") content = <ConflictsScreen />;
   else if (current.key === "sell") content = <PosScreen />;
   else if (current.key === "sales") content = <SalesScreen />;

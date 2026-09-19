@@ -1,4 +1,5 @@
 import type { Permission } from "@zogal/auth-permissions";
+import type { FeatureKey } from "@zogal/shared";
 import {
   IconBox,
   IconCash,
@@ -30,6 +31,8 @@ export interface NavItem {
   anyOf?: Permission[];
   /** Set when the section isn't built yet — renders a "coming" page. */
   comingIn?: { stage: number; what: string };
+  /** 0027: plan entitlement that must be enabled; otherwise the section shows "Not included in your plan". */
+  feature?: FeatureKey;
 }
 
 /**
@@ -42,16 +45,16 @@ export const NAV: NavItem[] = [
   { key: "sell", label: "Sell", icon: IconShoppingCart, anyOf: ["sales.create"] },
   // Everyone: a cashier sees their own sales (RLS), the owner the whole shop.
   { key: "sales", label: "Sales", icon: IconHistory },
-  { key: "customers", label: "Customers", icon: IconAddressBook, anyOf: ["sales.create", "customers.manage"] },
-  { key: "notebook", label: "Scan a page", icon: IconCamera, anyOf: ["sales.create"] },
+  { key: "customers", label: "Customers", icon: IconAddressBook, anyOf: ["sales.create", "customers.manage"], feature: "customers" },
+  { key: "notebook", label: "Scan a page", icon: IconCamera, anyOf: ["sales.create"], feature: "notebook_scans" },
   { key: "items", label: "Items", icon: IconBox },
   { key: "purchases", label: "Purchases", icon: IconTruckDelivery, anyOf: ["purchases.create"] },
-  { key: "expenses", label: "Expenses", icon: IconCash, anyOf: ["expenses.create", "expenses.view"] },
+  { key: "expenses", label: "Expenses", icon: IconCash, anyOf: ["expenses.create", "expenses.view"], feature: "expenses" },
   { key: "staff", label: "Staff", icon: IconUsers, anyOf: ["users.manage"] },
   { key: "devices", label: "Terminals", icon: IconDeviceDesktop, anyOf: ["shop.settings"] },
   { key: "conflicts", label: "Sync issues", icon: IconAlertTriangle, anyOf: ["reports.view"] },
-  { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"] },
-  { key: "tax", label: "Tax", icon: IconReceiptTax, anyOf: ["tax.view"] },
+  { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"], feature: "reports" },
+  { key: "tax", label: "Tax", icon: IconReceiptTax, anyOf: ["tax.view"], feature: "tax" },
   { key: "settings", label: "Settings", icon: IconSettings, anyOf: ["shop.settings"] },
 ];
 

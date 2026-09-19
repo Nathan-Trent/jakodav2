@@ -3,6 +3,7 @@ import { IconKey, IconMailForward, IconPlus, IconUserOff, IconUserCheck } from "
 import { PERMISSIONS, SYSTEM_ROLE_IDS, listInvitations, listPermissionOverrides, listRolePermissions, listStaff, type Permission, type StaffRow } from "@zogal/auth-permissions";
 import { Alert, Badge, Button, Card, CardContent, ConfirmDialog, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess } from "@zogal/ui";
 import { PageHeader, Page } from "@/components/Shell";
+import { useFeature } from "@/lib/entitlements";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 import { useAsync } from "@/lib/useAsync";
@@ -30,7 +31,9 @@ const PERM_LABEL: Record<Permission, string> = {
 export function StaffScreen() {
   const { ctx, active, auth } = useSession();
   const shop = active!.shop;
-  const canRoles = active!.permissions.includes("roles.manage");
+  // 0027: custom roles, per-person overrides and manager PINs are one plan feature.
+  const rolesFeature = useFeature("staff_roles");
+  const canRoles = active!.permissions.includes("roles.manage") && rolesFeature;
   const db = getSupabase();
 
   const staff = useAsync(() => listStaff(db, shop.id), [shop.id]);
@@ -57,12 +60,13 @@ export function StaffScreen() {
     <>
       <PageHeader title="Staff" description="Who works here and what each person may do."
         actions={<>
-          {(active!.role.id === SYSTEM_ROLE_IDS.owner || active!.role.id === SYSTEM_ROLE_IDS.manager) && <Button variant="outline" onClick={() => void showMyPin()}><IconKey size={16} /> My manager PIN</Button>}
+          {rolesFeature && (active!.role.id === SYSTEM_ROLE_IDS.owner || active!.role.id === SYSTEM_ROLE_IDS.manager) && <Button variant="outline" onClick={() => void showMyPin()}><IconKey size={16} /> My manager PIN</Button>}
           {canRoles && <Button variant="outline" onClick={() => setShowRole(true)}>New role</Button>}
           <Button onClick={() => setShowInvite(true)}><IconPlus size={16} /> Invite</Button>
         </>} />
       <Page>
         {staff.error && <Alert tone="warning" title="Couldn't load staff">{staff.error}</Alert>}
+        {!rolesFeature && <Alert tone="info" title="Roles & manager PINs aren't in your plan">Everyone here uses the built-in Owner, Manager and Salesperson roles. Custom roles, per-person permission changes and PIN approvals come with a higher plan.</Alert>}
         <Card className="py-0">
           <div className="px-5 pt-4 pb-2 text-title">{(staff.data ?? []).filter((s) => s.is_active).length} people</div>
           <div className="overflow-x-auto">
@@ -91,7 +95,7 @@ export function StaffScreen() {
                         {ov.length === 0 ? "—" : ov.map((o) => <Badge key={o.permission_key} variant={o.allowed ? "success" : "warning"} className="mr-1">{o.allowed ? "+" : "−"} {PERM_LABEL[o.permission_key]}</Badge>)}
                       </TableCell>
                       <TableCell className="pr-5 text-right whitespace-nowrap">
-                        <Button variant="ghost" size="sm" onClick={() => setEditing(s)} disabled={!s.is_active}>Permissions</Button>
+                        {rolesFeature && <Button variant="ghost" size="sm" onClick={() => setEditing(s)} disabled={!s.is_active}>Permissions</Button>}
                         {!me && !lastOwner && (
                           <Button variant="ghost" size="sm" className={s.is_active ? "text-muted-foreground hover:text-destructive" : ""} onClick={() => setToggle(s)} title={s.is_active ? "Deactivate" : "Reactivate"}>
                             {s.is_active ? <IconUserOff size={14} /> : <IconUserCheck size={14} />}

@@ -91,6 +91,9 @@ Deno.serve(async (req) => {
     server_time: string;
     subscription: { status: string; plan: string; expires_at: string | null };
     policy: Record<string, number>;
+    // 0027: plan entitlements + this terminal's standing; signed with the rest.
+    entitlements?: Record<string, unknown>;
+    standing?: string;
   };
 
   const payload = {
@@ -101,6 +104,8 @@ Deno.serve(async (req) => {
     plan: state.subscription.plan,
     expires_at: state.subscription.expires_at,
     policy: state.policy,
+    entitlements: state.entitlements ?? {},
+    standing: state.standing ?? "ok",
     issued_at: state.server_time,
     // The device treats its token as stale past this, even offline.
     token_expires_at: new Date(Date.parse(state.server_time) + TOKEN_TTL_DAYS * 86_400_000).toISOString(),

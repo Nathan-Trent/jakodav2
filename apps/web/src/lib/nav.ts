@@ -1,4 +1,5 @@
 import type { Permission } from "@zogal/auth-permissions";
+import type { FeatureKey } from "@zogal/shared";
 import {
   IconAlertTriangle, IconChartBar, IconCreditCard, IconDeviceDesktop,
   IconLayoutDashboard, IconReceiptTax, IconSettings, IconUsers, type Icon,
@@ -11,14 +12,14 @@ import {
  */
 export type ShopPage = "overview" | "reports" | "staff" | "devices" | "tax" | "conflicts" | "subscription" | "settings";
 
-export interface NavItem<K extends string> { key: K; label: string; icon: Icon; anyOf?: Permission[] }
+export interface NavItem<K extends string> { key: K; label: string; icon: Icon; anyOf?: Permission[]; /** 0027: plan entitlement required. */ feature?: FeatureKey }
 
 export const SHOP_NAV: NavItem<ShopPage>[] = [
   { key: "overview", label: "Overview", icon: IconLayoutDashboard },
-  { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"] },
+  { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"], feature: "reports" },
   { key: "staff", label: "Staff", icon: IconUsers, anyOf: ["users.manage"] },
   { key: "devices", label: "Terminals", icon: IconDeviceDesktop, anyOf: ["shop.settings"] },
-  { key: "tax", label: "Tax", icon: IconReceiptTax, anyOf: ["tax.view"] },
+  { key: "tax", label: "Tax", icon: IconReceiptTax, anyOf: ["tax.view"], feature: "tax" },
   { key: "conflicts", label: "Sync issues", icon: IconAlertTriangle, anyOf: ["reports.view"] },
   { key: "subscription", label: "Subscription", icon: IconCreditCard, anyOf: ["shop.settings"] },
   { key: "settings", label: "Settings", icon: IconSettings, anyOf: ["shop.settings"] },

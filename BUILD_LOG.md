@@ -731,6 +731,70 @@ the operational center". Built in the back office:
   belt-and-braces for tables deliberately locked down, not evidence every
   table needs it). No grant bug; checked before assuming one.
 
+## Feature gating, plan entitlements, server-side gate, abuse limits (Nathan, 2026-09-19) — v0.3.13
+Status: BUILT — **0027 NOT YET APPLIED**; edge function needs redeploy
+(`npx supabase functions deploy issue-subscription-token`).
+
+Audit found: only terminals (at code creation) and staff (at invite) were
+enforced; nothing was re-checked on downgrade; plan bullets promised
+features nothing gated; `record_sale`/`replay_offline_sale` never asked
+whether the subscription was alive (a patched client could sell past lock
+and sync fine); the signed token carried no limits, so offline a terminal
+couldn't know it was the 4th of 3. Nathan: every feature gateable per plan
+(on/off, how many, per what period), abuse limits too.
+
+- **`0027_entitlements.sql`** — SCHEMA ADDITIONS `feature_catalogue`,
+  `pricing_plans(.draft).entitlements`, `rate_limit_hits`.
+  - Catalogue (10 keys): terminals/staff/shops/items/customers (count),
+    notebook_scans (quota per day|week|month|year), staff_roles/tax/
+    reports/expenses (toggle). Plan `entitlements` = {key: {enabled,
+    quantity, period}}; missing key = on + unlimited. Existing plans
+    migrated from `limits`; `features` + `limits` are now DERIVED by
+    trigger from entitlements (marketing bullets can't drift from gates).
+  - `require_entitlement(shop, key, adding)` asked by: record_sale (via
+    device_standing), activate_device (advisory lock: two codes can't both
+    squeeze in), create_device_activation_code, shop_members insert
+    (accept) + invitations, create_shop (shops per owner), items/customers/
+    expenses/tax_periods insert triggers, create_custom_role /
+    get_my_manager_pin / authorize_override (staff_roles), shop_report,
+    shop_tax_summary, notebook_scan_begin (quota by plan period — the single
+    platform number is gone).
+  - Downgrade: `device_standing()` — newest terminals beyond the limit are
+    `over_limit` (read-only, sales refused); `member_over_limit()` — newest
+    staff beyond the limit lose permissions (`has_permission` now checks it;
+    Owners never cut).
+  - **Server gate**: `shop_gate_level(shop, at)` = the gating.ts ladder in
+    SQL; `require_writable` in record_sale, replay (judged at sold_at — a
+    sale made inside grace is honest even if uploaded later), items,
+    expenses, purchases. Tampering with the app gains nothing.
+  - **Abuse limits** `rate_limit_hit(bucket, n, window)`: sales 600/10min
+    per user, customers 300/10min, activation codes 20/h, create_shop 5/h,
+    scans 30/10min, heartbeat 120/10min per device. Keyed by identity (the
+    device credential IS the token); IP only where there is none (0025).
+  - Wrapped, same signature: record_sale, replay_offline_sale, create_shop,
+    activate_device, create_custom_role, get_my_manager_pin,
+    authorize_override, shop_report, shop_tax_summary (originals kept as
+    *_v1 / shop_report_v2, revoked from clients).
+  - `device_heartbeat` returns `entitlements` + `standing`; the edge
+    function signs them into the token. **Offline enforcement = same data.**
+- `packages/shared/entitlements.ts`; `packages/sync`: token payload +
+  `GateInput.standing` → `read_only/terminal_over_limit`.
+- Desktop: `lib/entitlements.tsx` (token first — can't be edited on the
+  machine; RPC fallback before the first token, cached); nav `feature` →
+  `PlanLockedScreen` ("Not included in your plan", stays in the menu);
+  Sell hides the customer picker; Staff hides roles/PIN/overrides with a
+  notice. Web: same via `shop_entitlements` + Realtime on pricing_plans/
+  subscriptions; Subscription screen lists every feature with usage
+  ("Notebook scans: 3 of 5 this day").
+- Back office Plans editor: per-feature rows (checkbox · quantity · period)
+  replace the two limit boxes and the free-text features; "Shown as"
+  preview is the generated bullet list. Publish carries entitlements.
+- Friendly errors: `subscription_locked:`, `rate_limited:`.
+- Honest note on "impenetrable": nothing on a user's machine is. The token
+  can't be forged (Ed25519, no private key on device), clock rollback is
+  detected, and now the server refuses what the gate refuses — so a patched
+  terminal is a local toy that can never upload.
+
 ## Four bugs from Nathan's first day on 0.3.11 (2026-09-19) — v0.3.12
 Status: BUILT — **0026 NOT YET APPLIED** (customers offline-first needs it).
 
