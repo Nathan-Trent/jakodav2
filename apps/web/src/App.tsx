@@ -4,6 +4,7 @@ import { Shell } from "@/components/Shell";
 import { SessionProvider, useSession } from "@/lib/session";
 import { isAdminPath, shopPageFromPath, shopPath, visibleShopNav, type ShopPage } from "@/lib/nav";
 import { LoginScreen } from "@/screens/LoginScreen";
+import { CreateShopScreen } from "@/screens/CreateShopScreen";
 import { OverviewScreen } from "@/screens/OverviewScreen";
 import { ReportsScreen } from "@/screens/ReportsScreen";
 import { StaffScreen } from "@/screens/StaffScreen";
@@ -35,21 +36,13 @@ function usePath<K extends string>(fromPath: (p: string) => K, toPath: (k: K) =>
 
 /** The shop owner's dashboard at `/`. */
 function ShopRouter() {
-  const { status, ctx, active, signOut, refresh } = useSession();
+  const { status, active, signOut, refresh } = useSession();
   const [page, navigate] = usePath<ShopPage>(shopPageFromPath, shopPath);
 
   if (status === "loading") return <LoadingMark label="Starting up…" />;
   if (status === "signed-out") return <LoginScreen />;
   if (status === "unreachable") return <ConnectionScreen onRetry={refresh} signOut={() => void signOut()} />;
-  if (!active) {
-    return (
-      <div className="min-h-full grid place-items-center p-8">
-        <Alert tone="info" title="No shop yet" action={<Button variant="outline" size="sm" onClick={() => void signOut()}>Sign out</Button>}>
-          {ctx?.user?.full_name}, your account isn't a member of any shop. Create the shop from the desktop app, or ask the owner to invite you.
-        </Alert>
-      </div>
-    );
-  }
+  if (!active) return <CreateShopScreen />;
   const allowed = visibleShopNav(active.permissions);
   const current = allowed.find((n) => n.key === page) ?? allowed[0]!;
   let content: React.ReactNode;
