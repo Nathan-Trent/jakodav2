@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { currentImpersonation, fetchNotices, markNoticeRead, type Impersonation, type UserNotice } from "@zogal/auth-permissions";
+import { currentImpersonation, fetchNotices, markNoticeRead, subscribePresence, type Impersonation, type UserNotice } from "@zogal/auth-permissions";
 import { PresenceBar } from "@zogal/ui";
 import { getSupabase } from "@/lib/supabase";
 import { useOnline } from "@/lib/useOnline";
 
-/** Notices from Zogal Business and the "staff is signed in as you" bar. Checked on open and every 5 minutes; silent offline. */
+/** Notices from Zogal Business and the "staff is signed in as you" bar. Pushed by the database (no polling); read once on open and on reconnect; silent offline. */
 export function Presence() {
   const online = useOnline();
   const [notices, setNotices] = useState<UserNotice[]>([]);
@@ -15,7 +15,9 @@ export function Presence() {
     const [n, i] = await Promise.all([fetchNotices(db), currentImpersonation(db)]);
     setNotices(n); setImp(i);
   }, []);
-  useEffect(() => { void load(); const t = setInterval(() => void load(), 5 * 60_000); return () => clearInterval(t); }, [load, online]);
+  // Subscribe once; every change to my rows re-reads. Coming back online re-subscribes (supabase-js) and re-reads.
+  useEffect(() => subscribePresence(getSupabase(), () => void load()), [load]);
+  useEffect(() => { if (online) void load(); }, [online, load]);
   if (!imp && notices.every((n) => n.read_at)) return null;
   return (
     <div className="px-8 pt-5">

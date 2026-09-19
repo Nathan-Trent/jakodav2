@@ -1,6 +1,6 @@
 [package]
 name = "doka-desktop"
-version = "0.3.5"
+version = "0.3.6"
 description = "Doka by Zogal — desktop till"
 edition = "2021"
 

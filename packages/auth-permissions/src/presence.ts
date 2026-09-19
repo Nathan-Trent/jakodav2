@@ -34,3 +34,18 @@ export async function currentImpersonation(db: SupabaseClient): Promise<Imperson
   if (error || !data) return null;
   return data as Impersonation;
 }
+
+/**
+ * Push instead of poll (Nathan, 2026-09-19): subscribe to this user's own
+ * notices and impersonation rows. RLS (0016/0018) limits what Realtime
+ * delivers to the caller's rows, so no filter is needed on the client.
+ * Returns an unsubscribe. Reconnects are supabase-js's job; `onChange` is
+ * called once on subscribe so the first read happens the same way.
+ */
+export function subscribePresence(db: SupabaseClient, onChange: () => void): () => void {
+  const ch = db.channel("presence")
+    .on("postgres_changes", { event: "*", schema: "public", table: "user_notices" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "impersonations" }, onChange)
+    .subscribe((status) => { if (status === "SUBSCRIBED") onChange(); });
+  return () => { void db.removeChannel(ch); };
+}
