@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Button, ConnectionScreen, LoadingMark, Toaster } from "@zogal/ui";
 import { Shell } from "@/components/Shell";
 import { SessionProvider, useSession } from "@/lib/session";
-import { ADMIN_NAV, adminPageFromPath, adminPath, isAdminPath, shopPageFromPath, shopPath, visibleShopNav, type AdminPage, type ShopPage } from "@/lib/nav";
+import { isAdminPath, shopPageFromPath, shopPath, visibleShopNav, type ShopPage } from "@/lib/nav";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { OverviewScreen } from "@/screens/OverviewScreen";
 import { ReportsScreen } from "@/screens/ReportsScreen";
@@ -12,16 +12,12 @@ import { TaxScreen } from "@/screens/TaxScreen";
 import { ConflictsScreen } from "@/screens/ConflictsScreen";
 import { SubscriptionScreen } from "@/screens/SubscriptionScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
-import { AdminShopsScreen } from "@/screens/admin/AdminShopsScreen";
-import { AdminPlatformScreen } from "@/screens/admin/AdminPlatformScreen";
-import { AdminOpsScreen } from "@/screens/admin/AdminOpsScreen";
-import { AdminPricingScreen } from "@/screens/admin/AdminPricingScreen";
 
 export function App() {
   const admin = isAdminPath(location.pathname);
   return (
     <SessionProvider>
-      {admin ? <AdminRouter /> : <ShopRouter />}
+      {admin ? <MovedToBackOffice /> : <ShopRouter />}
       <Toaster position="top-center" richColors />
     </SessionProvider>
   );
@@ -70,30 +66,14 @@ function ShopRouter() {
   return <Shell items={allowed} page={current.key} onNavigate={navigate} variant="shop">{content}</Shell>;
 }
 
-/** The Zogal back office at `/admin` — platform admins only; Postgres refuses everyone else anyway. */
-function AdminRouter() {
-  const { status, admin, ctx, signOut, refresh } = useSession();
-  const [page, navigate] = usePath<AdminPage>(adminPageFromPath, adminPath);
-
-  if (status === "loading") return <LoadingMark label="Starting up…" />;
-  if (status === "signed-out") return <LoginScreen variant="admin" />;
-  if (status === "unreachable") return <ConnectionScreen onRetry={refresh} signOut={() => void signOut()} />;
-  if (!admin) {
-    return (
-      <div className="min-h-full grid place-items-center p-8">
-        <Alert tone="warning" title="This is the Zogal back office"
-          action={<div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => location.assign("/")}>Go to my shop</Button><Button variant="ghost" size="sm" onClick={() => void signOut()}>Sign out</Button></div>}>
-          {ctx?.user?.full_name}, your account isn't a platform admin. Your shop dashboard is at the main address.
-        </Alert>
-      </div>
-    );
-  }
-  let content: React.ReactNode;
-  switch (page) {
-    case "pricing": content = <AdminPricingScreen />; break;
-    case "platform": content = <AdminPlatformScreen />; break;
-    case "ops": content = <AdminOpsScreen />; break;
-    default: content = <AdminShopsScreen />;
-  }
-  return <Shell items={ADMIN_NAV} page={page} onNavigate={navigate} variant="admin">{content}</Shell>;
+/** /admin retired (2026-09-20): everything it did lives in the Zogal Business back office. */
+function MovedToBackOffice() {
+  return (
+    <div className="min-h-full grid place-items-center p-8">
+      <Alert tone="info" title="The back office has moved"
+        action={<div className="flex gap-2"><Button size="sm" onClick={() => location.assign("https://ops.business.zogal.app/ops")}>Open the Zogal Business back office</Button><Button variant="ghost" size="sm" onClick={() => location.assign("/")}>My shop dashboard</Button></div>}>
+        Plans, settings, shops and terminals are managed at ops.business.zogal.app now. Nothing was lost.
+      </Alert>
+    </div>
+  );
 }
