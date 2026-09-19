@@ -5,7 +5,8 @@ import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 import { useAsync } from "@/lib/useAsync";
 
-interface Sub { status: "active" | "past_due" | "cancelled"; plan: string; expires_at: string | null }
+interface Sub { status: "active" | "past_due" | "cancelled"; plan: string; expires_at: string | null; auto_renew: boolean }
+interface Card { id: string; provider: string; brand: string | null; last4: string | null; exp_month: number | null; exp_year: number | null }
 interface Usage { plan: string | null; limits: { terminals?: number; staff?: number }; terminals: number; staff: number }
 interface Invoice { id: string; number: string; plan_key: string; period_start: string; period_end: string; amount: number; currency: string; status: "unpaid" | "paid" | "void"; provider: string | null; paid_at: string | null; created_at: string }
 interface Plan { key: string; name: string; tagline: string | null; price_monthly: number; price_yearly: number | null; features: string[]; limits: { terminals?: number; staff?: number }; highlight: boolean }
@@ -27,17 +28,19 @@ export function SubscriptionScreen() {
 
   const data = useAsync(async () => {
     const db = getSupabase();
-    const [s, u, inv, plans] = await Promise.all([
-      db.from("subscriptions").select("status, plan, expires_at").eq("shop_id", shop.id).single<Sub>(),
+    const [s, u, inv, plans, cards] = await Promise.all([
+      db.from("subscriptions").select("status, plan, expires_at, auto_renew").eq("shop_id", shop.id).single<Sub>(),
       db.rpc("shop_plan_usage", { p_shop_id: shop.id }),
       db.from("invoices").select("id, number, plan_key, period_start, period_end, amount, currency, status, provider, paid_at, created_at").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(24),
       db.from("pricing_plans").select("key, name, tagline, price_monthly, price_yearly, features, limits, highlight").eq("product", "doka").eq("is_visible", true).order("sort_order"),
+      db.from("payment_methods_view").select("id, provider, brand, last4, exp_month, exp_year").eq("shop_id", shop.id).order("created_at", { ascending: false }),
     ]);
     if (s.error) throw s.error;
     if (u.error) throw u.error;
     if (inv.error) throw inv.error;
     if (plans.error) throw plans.error;
-    return { sub: s.data, usage: u.data as Usage, invoices: (inv.data ?? []) as Invoice[], plans: (plans.data ?? []) as Plan[] };
+    if (cards.error) throw cards.error;
+    return { sub: s.data, usage: u.data as Usage, invoices: (inv.data ?? []) as Invoice[], plans: (plans.data ?? []) as Plan[], cards: (cards.data ?? []) as Card[] };
   }, [shop.id, tick]);
 
   // Back from checkout: ?invoice=&provider=&reference=(&transaction_id=) → confirm with Zogal's server.
@@ -67,6 +70,21 @@ export function SubscriptionScreen() {
       if (r.url) window.location.assign(r.url); else notifyError(new Error(r.error ?? "Couldn't start payment"));
     } catch (e) { notifyError(e); }
     setPaying(null);
+  };
+
+  // Card on file: remove it, or turn automatic renewal off/on. Own rows only (RLS).
+  const [cardBusy, setCardBusy] = useState(false);
+  const removeCard = async (id: string) => {
+    setCardBusy(true);
+    const { error } = await getSupabase().from("payment_methods").update({ revoked_at: new Date().toISOString() }).eq("id", id);
+    if (error) notifyError(error); else notifySuccess("Card removed", { description: "We won't charge it again. You'll get reminders before expiry instead." });
+    setCardBusy(false); reload();
+  };
+  const setAutoRenew = async (on: boolean) => {
+    setCardBusy(true);
+    const { error } = await getSupabase().from("subscriptions").update({ auto_renew: on }).eq("shop_id", shop.id);
+    if (error) notifyError(error); else notifySuccess(on ? "Automatic renewal on" : "Automatic renewal off");
+    setCardBusy(false); reload();
   };
 
   const d = data.data;
@@ -117,6 +135,28 @@ export function SubscriptionScreen() {
               <div className="flex gap-1 mt-1">{days !== null && days < 0 ? <Badge variant="warning">In grace / read-only window</Badge> : <Badge variant="success">Full use</Badge>}</div>
             </CardContent></Card>
           </div>
+        )}
+
+        {s && d && (
+          <Card className="py-4 gap-0"><CardContent className="px-5 flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[220px]">
+              <div className="font-semibold">Renewal</div>
+              {d.cards.length > 0 ? (
+                <div className="text-caption text-muted-foreground">
+                  Card on file: {d.cards[0]!.brand ?? "card"} •••• {d.cards[0]!.last4 ?? "????"}{d.cards[0]!.exp_month ? ` · expires ${String(d.cards[0]!.exp_month).padStart(2, "0")}/${d.cards[0]!.exp_year}` : ""}.
+                  {s.auto_renew ? " We renew automatically a few days before expiry and email you a receipt." : " Automatic renewal is off — we'll remind you before expiry."}
+                </div>
+              ) : (
+                <div className="text-caption text-muted-foreground">No card on file. Pay once online and we can renew automatically from then on — no card to re-enter.</div>
+              )}
+            </div>
+            {d.cards.length > 0 && (
+              <div className="flex gap-2">
+                <Button variant="outline" disabled={cardBusy} onClick={() => void setAutoRenew(!s.auto_renew)}>{s.auto_renew ? "Turn auto-renew off" : "Turn auto-renew on"}</Button>
+                <Button variant="ghost" disabled={cardBusy} onClick={() => void removeCard(d.cards[0]!.id)}>Remove card</Button>
+              </div>
+            )}
+          </CardContent></Card>
         )}
 
         {d && d.plans.length > 0 && (
