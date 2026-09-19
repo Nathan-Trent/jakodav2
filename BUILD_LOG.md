@@ -608,8 +608,12 @@ created (Nathan, later) — jobs still run via the JOBS_SECRET kick.
 - Marketing slice (site copy in DB, draft→publish, contact inbox + reply).
 - Retire doka.zogal.app/admin once Finance covers it (it does now — remove).
 - §8.1 tax rules verification page; Nielsen/Norman pass on every screen.
-- Device credential to OS secure store; rate-limit activate_device; Apple
-  signing; accountant verification of tax rules.
+- Device credential to OS secure store; rate-limit activate_device;
+  accountant verification of tax rules.
+- **Apple signing + notarization — REQUIRED before promoting the Mac download.**
+  Unsigned build shows "Doka is damaged" on Sequoia (Gatekeeper). Workaround
+  today: `xattr -cr /Applications/Doka.app`. Needs Apple Developer account →
+  Developer ID cert → APPLE_* secrets (workflow already supports them).
 - Redesign of the login screen (feedback state first — part of step 1).
 
 ## Release pipeline — LIVE (2026-09-18)
