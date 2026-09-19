@@ -10,3 +10,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** Release number, injected at build time from apps/desktop/src-tauri/tauri.conf.json. */
+declare const __APP_VERSION__: string;

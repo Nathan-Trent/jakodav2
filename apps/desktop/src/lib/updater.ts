@@ -24,6 +24,29 @@ export interface UpdateState {
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 export const isTauri = (): boolean => typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
+/**
+ * The cashier never needs to read a raw updater exception — that's for us,
+ * in the console. This turns the ones we actually see into one plain
+ * sentence; anything unrecognised falls back to a generic, still-plain line
+ * rather than the technical text.
+ */
+export function friendlyUpdateError(raw: string | undefined): string {
+  const m = raw ?? "";
+  if (/fallback platforms.*not found|platforms.*object/i.test(m)) {
+    return "The update server wasn't finished publishing this release when we checked. Try again in a few minutes.";
+  }
+  if (/Failed to fetch|NetworkError|ERR_INTERNET|dns|timed? ?out/i.test(m)) {
+    return "Couldn't reach the update server. Check the connection and try again.";
+  }
+  if (/404|not found/i.test(m)) {
+    return "No release was found to update to. Try again later.";
+  }
+  if (/signature/i.test(m)) {
+    return "The update didn't pass its safety check, so it wasn't installed. Try again later, or reinstall Doka from getzogal.com.";
+  }
+  return "Something stopped the check. Try again later.";
+}
+
 type UpdateHandle = {
   version: string;
   body?: string;

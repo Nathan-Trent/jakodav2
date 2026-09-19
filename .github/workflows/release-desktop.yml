@@ -84,6 +84,24 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Doka ${{ github.ref_name }}"
           releaseBody: "See the commit log for what changed. Installed apps update themselves."
-          releaseDraft: false
+          # DRAFT until every platform has built (see the publish job below).
+          # Windows, Mac-arm and Mac-intel build in parallel and each one
+          # merges its own entry into latest.json and re-uploads it. A
+          # non-draft release is "latest" (and visible to the updater and
+          # the marketing site) the instant the FIRST of the three finishes
+          # — so for the several minutes until the slowest build lands,
+          # anyone checking for updates saw an incomplete latest.json and a
+          # confusing raw error. Keeping it a draft hides it from all of
+          # that until the whole set is in.
+          releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the release now that every platform has built
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --repo "${{ github.repository }}" --draft=false

@@ -109,6 +109,7 @@ export function AppShell({ page, onNavigate, children }: { page: PageKey; onNavi
           >
             <IconLogout size={16} stroke={1.75} /> {!collapsed && "Sign out"}
           </button>
+          <div className="text-micro text-sidebar-muted/70 tabular" title="Doka release number">{collapsed ? `v${__APP_VERSION__}` : `Doka ${__APP_VERSION__}`}</div>
         </div>
       </aside>
 

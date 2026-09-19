@@ -51,6 +51,7 @@ export function Shell<K extends string>({ items, page, onNavigate, variant, chil
           </div>
           <button className="text-sidebar-muted hover:text-sidebar-foreground" title="Sign out" onClick={() => void signOut()}><IconLogout size={18} /></button>
         </div>
+        <div className="text-micro text-sidebar-muted/70 tabular mt-2" title="Doka release number">Doka {__APP_VERSION__} · web</div>
       </div>
     </>
   );

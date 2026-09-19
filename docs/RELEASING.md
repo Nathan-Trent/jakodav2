@@ -30,9 +30,12 @@ Installed copies update themselves. Nothing is built on a developer machine.
        git tag v0.2.0
        git push origin v0.2.0
 
-3. GitHub Actions builds the Windows installer and both Mac apps (~20 min), signs it, and publishes
-   Release `v0.2.0` with `latest.json`. Installed apps see it within 6 hours
-   (or on next launch) and offer "Update and restart".
+3. GitHub Actions builds the Windows installer and both Mac apps in parallel
+   (~20 min) and signs them. Each build uploads to a DRAFT release; once all
+   three are in, a final job publishes it (undrafts it) in one step. Installed
+   apps and the marketing site never see a half-built release — only the
+   complete one. Installed apps see it within 6 hours (or on next launch)
+   and offer "Update and restart".
 
 First install on a new machine: download the `.exe` (Windows) or `.dmg` (Mac — Apple Silicon or Intel) from the latest Release.
 
