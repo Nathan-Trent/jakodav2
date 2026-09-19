@@ -23,6 +23,10 @@ export function friendlyError(e: unknown): FriendlyError {
   if ((m = raw.match(/insufficient_stock: item .* short by (\d+)/))) {
     return { title: "Not enough stock", detail: `You're ${m[1]} unit${m[1] === "1" ? "" : "s"} short — another terminal may have just sold some.`, action: "Reduce the quantity or restock first." };
   }
+  if ((m = raw.match(/plan_limit: (.+)/))) {
+    // Plan gating (0017): the plan's limit was reached at activation or invite.
+    return { title: "Your plan is full", detail: m[1]!.replace(/\.?$/, "."), action: "Upgrade from Subscription, or free a seat." };
+  }
   if (/invalid PIN/i.test(raw)) return { title: "PIN not recognised", action: "Ask the manager to check their current PIN in their own login — PINs rotate weekly." };
   if (/too many failed PIN attempts/i.test(raw)) return { title: "Too many PIN attempts", action: "Wait 15 minutes, then try again." };
   if (/invalid or expired activation code/i.test(raw)) return { title: "Activation code not valid", action: "Codes last 10 minutes. Ask the owner to generate a new one." };

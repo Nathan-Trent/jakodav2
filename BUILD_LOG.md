@@ -553,6 +553,30 @@ and Finance are placeholders (slices 2–3). Apps (v0.3.3): record_signin on
 sign-in; PresenceBar shows notices and the impersonation bar. Fixed: 30-day
 chart blank (percentage bar heights); revoke terminal (select of ungranted column).
 
+## Back office slice 2 — keys, Finance, payments (2026-09-19)
+0017 (product_secrets, pricing_plans_draft + publish_catalogue, plan gating in
+create_device_activation_code + invite trigger, invoices + apply_payment) —
+handed to Nathan to run. Desktop v0.3.4: "Check for updates" in the sidebar
+footer (one UpdaterProvider shared with the banner). Back office: Keys per
+product (Doka → Settings → Keys) and company-wide (Zogal Business → Keys, Root);
+write-only, set/not set/from-env, audited. mail.ts and the notebook Edge
+Function read keys from product_secrets (env fallback; key checked before
+spending scan allowance). Finance: Plans & prices (draft → publish, diff vs
+live, history; replaces /admin/pricing), Subscriptions & invoices (needs
+attention, raise invoice + email, resend, mark paid by hand, void). Payments:
+`/api/pay/init` and `/api/pay/confirm` (user JWT, invoice read under RLS,
+Paystack/Flutterwave keys from product_secrets) + webhooks
+`/api/pay/webhook/{paystack,flutterwave}` (signature/hash + provider re-verify;
+amount checked; apply_payment idempotent). Dashboard Subscription page: plan
+usage (shop_plan_usage), plans, invoices with Pay buttons, confirm on return
+(`?invoice&provider&reference`), plan_limit errors in plain words.
+Not started: plan change self-service from the dashboard; renewal reminders
+7/1/0 days (needs a cron); Marketing slice; retire /admin; §8.1 tax page.
+Nathan: run 0017; set keys in the back office; set webhook URLs in Paystack
+(`/api/pay/webhook/paystack`) and Flutterwave (`/api/pay/webhook/flutterwave`,
+secret hash = flutterwave_secret_hash); Vercel env DOKA_APP_URL on the back
+office; optional VITE_PAY_API_URL on the dashboard (defaults to ops URL).
+
 ## Release pipeline — LIVE (2026-09-18)
 v0.3.0 (Windows) and v0.3.1 (Windows + macOS arm64/x86_64, unsigned) built
 and published by GitHub Actions from tags. Updater public key in
