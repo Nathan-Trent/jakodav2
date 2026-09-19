@@ -58,7 +58,7 @@ export function CustomersScreen() {
         />
         <div className="px-8 pb-8 grid gap-4">
           <StaleNotice />
-          {!open.is_active && <Alert tone="info" title="This customer is deactivated">They won't appear at the till. Their history is kept.</Alert>}
+          {!open.is_active && <Alert tone="info" title="This customer is deactivated">They won't appear on the Sell screen. Their history is kept.</Alert>}
           {open.id.startsWith("pending:")
             ? <Alert tone="info" title="Added on this terminal while offline">Their purchases will show here once the sale uploads.</Alert>
             : <SalesScreen customerId={open.id} embedded />}
@@ -72,7 +72,7 @@ export function CustomersScreen() {
     <>
       <PageHeader
         title="Customers"
-        description="Optional on every sale. Attach a customer at the till to build their history."
+        description="Optional on every sale. Attach a customer on the Sell screen to build their history."
         actions={canAdd && <Button onClick={() => setEditing("new")} disabled={!online} title={!online ? "Needs a connection" : undefined}><IconPlus size={16} /> Add customer</Button>}
       />
       <div className="px-8 pb-8 grid gap-4">
@@ -102,7 +102,7 @@ export function CustomersScreen() {
             <TableBody>
               {list.length === 0 && (
                 <TableRow><TableCell colSpan={4} className="pl-5 text-muted-foreground">
-                  {data.customers.length === 0 ? "No customers yet. Add one here, or at the till when recording a sale." : `No one matches “${q}”.`}
+                  {data.customers.length === 0 ? "No customers yet. Add one here, or on the Sell screen when recording a sale." : `No one matches “${q}”.`}
                 </TableCell></TableRow>
               )}
               {list.map((c) => (
@@ -135,7 +135,7 @@ export function CustomersScreen() {
         open={!!toDeactivate}
         onOpenChange={(o) => !o && setToDeactivate(null)}
         title={`Deactivate ${toDeactivate?.name ?? "this customer"}?`}
-        description="They stop appearing at the till. Nothing is deleted — their purchase history stays, and you can reactivate them by editing."
+        description="They stop appearing on the Sell screen. Nothing is deleted — their purchase history stays, and you can reactivate them by editing."
         confirmLabel="Deactivate"
         destructive
         onConfirm={async () => {
@@ -187,7 +187,7 @@ function CustomerDialog({ customer, onClose, onDone }: { customer: CustomerRow |
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
             <DialogTitle>{customer ? `Edit ${customer.name}` : "New customer"}</DialogTitle>
-            <DialogDescription>A name is enough. A phone number helps the till find them quickly.</DialogDescription>
+            <DialogDescription>A name is enough. A phone number helps find them quickly when selling.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
             <Label htmlFor="c-name">Name</Label>
@@ -205,7 +205,7 @@ function CustomerDialog({ customer, onClose, onDone }: { customer: CustomerRow |
           </div>
           {customer && (
             <label className="inline-flex items-center gap-2 text-small">
-              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> Active (shows at the till)
+              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> Active (shows when selling)
             </label>
           )}
           <DialogFooter>

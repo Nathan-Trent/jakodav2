@@ -183,7 +183,7 @@ export function AddStockDialog({ item, onClose, onDone }: { item: ItemRow | null
                       <Label htmlFor="as-sugg">Suggested price (₦)</Label>
                       <NumberField id="as-sugg" prefix="₦" decimals={2} value={suggested} onChange={setSuggested} required />
                       <p className={cn("text-caption", marginSugg !== null && marginSugg < 0 ? "text-status-red" : "text-muted-foreground")}>
-                        {marginSugg !== null ? `${formatNaira(marginSugg)} margin per unit` : "What the till starts at"}
+                        {marginSugg !== null ? `${formatNaira(marginSugg)} margin per unit` : "What the Sell screen starts at"}
                       </p>
                     </div>
                   </div>

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/AppShell";
 import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { TaxWidget } from "@/components/TaxWidget";
+import { CheckForUpdates } from "@/components/CheckForUpdates";
 import { PeriodPicker, describeRange, resolvePreset, type PeriodRange, Badge, Button, Card, CardContent, cn } from "@zogal/ui";
 import { getSupabase } from "@/lib/supabase";
 import { useShopData } from "@/lib/shopData";
@@ -75,6 +76,7 @@ export function DashboardScreen({ onNavigate }: { onNavigate: (p: PageKey) => vo
         description={mine ? `Your sales ${periodWord}` : `${shop.name} · ${describeRange(period)}`}
         actions={
           <>
+            <CheckForUpdates />
             <PeriodPicker value={period} onChange={setPeriod} />
             <Button variant="outline" onClick={() => void load()} disabled={loading}><IconRefresh size={16} /> Refresh</Button>
             {perms.includes("sales.create") && (

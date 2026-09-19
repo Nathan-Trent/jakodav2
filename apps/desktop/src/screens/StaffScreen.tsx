@@ -150,7 +150,7 @@ export function StaffScreen() {
       {pin && (
         <Dialog open onOpenChange={(o) => !o && setPin(null)}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Your manager PIN</DialogTitle><DialogDescription>For approving overrides at the till. It rotates automatically; only you can see it.</DialogDescription></DialogHeader>
+            <DialogHeader><DialogTitle>Your manager PIN</DialogTitle><DialogDescription>For approving overrides on the shop computer. It rotates automatically; only you can see it.</DialogDescription></DialogHeader>
             <div className="figure text-[40px] tracking-[0.3em] text-center py-4 tabular">{pin.pin}</div>
             <p className="text-caption text-muted-foreground text-center">Valid until {new Date(pin.expires_at).toLocaleString()}</p>
           </DialogContent>

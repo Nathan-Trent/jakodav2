@@ -15,7 +15,7 @@ import type { NavItem } from "@/lib/nav";
 export function Shell<K extends string>({ items, page, onNavigate, variant, children }: {
   items: NavItem<K>[]; page: K; onNavigate: (p: K) => void; variant: "shop" | "admin"; children: ReactNode;
 }) {
-  const { ctx, active, admin, setActiveShop, signOut } = useSession();
+  const { ctx, active, setActiveShop, signOut } = useSession();
   const [open, setOpen] = useState(false);
   const sub = variant === "admin" ? "Back office" : "by Zogal";
 
@@ -35,9 +35,6 @@ export function Shell<K extends string>({ items, page, onNavigate, variant, chil
         ) : (
           <div className="text-small font-semibold truncate">{active?.shop.name ?? "No shop"}</div>
         ))}
-        {variant === "shop" && admin && (
-          <a href="https://ops.business.zogal.app/ops" className="text-caption text-sidebar-muted hover:text-sidebar-foreground inline-flex items-center gap-1">Zogal Business back office <IconExternalLink size={12} /></a>
-        )}
         {variant === "admin" && active && (
           <a href="/" className="text-caption text-sidebar-muted hover:text-sidebar-foreground inline-flex items-center gap-1">My shop dashboard <IconExternalLink size={12} /></a>
         )}

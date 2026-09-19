@@ -42,7 +42,7 @@ export function ItemsScreen() {
         </div>
         {items.length > 0 && items.some((i) => (codesByItem.get(i.id)?.length ?? 0) === 0) && perms.includes("items.create") && (
           <Alert tone="info" title={`${items.filter((i) => (codesByItem.get(i.id)?.length ?? 0) === 0).length} item(s) have no barcode`}>
-            Click an item to generate one and print a label — scanning at the till is faster than tapping.
+            Click an item to generate one and print a label — scanning is faster than tapping.
           </Alert>
         )}
         <Card className="py-0">

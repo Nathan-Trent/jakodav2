@@ -16,7 +16,7 @@ const ROWS: [string, string, string][] = [
   ["", "Profit after cost & expenses", "₦41,200"],
 ];
 
-export function AuthCover({ sub = "by Zogal", stamp = "Doka", title = "The till that knows your profit.", line, className, dayBook = true }: {
+export function AuthCover({ sub = "by Zogal", stamp = "Doka", title = "The shop app that knows your profit.", line, className, dayBook = true }: {
   sub?: string; stamp?: string; title?: string; line?: string; className?: string; dayBook?: boolean;
 }) {
   return (
