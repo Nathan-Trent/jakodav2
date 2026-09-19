@@ -731,6 +731,23 @@ the operational center". Built in the back office:
   belt-and-braces for tables deliberately locked down, not evidence every
   table needs it). No grant bug; checked before assuming one.
 
+## Held sales on the terminal (Nathan, 2026-09-19) — v0.3.11
+A customer is doing a transfer or went back for one more item; the cashier
+needs to serve the next person and come back. **Hold sale** parks the whole
+cart (lines, typed quantities/prices, customer, payment type) and clears the
+till; a **Held sales (n)** list at the top of the sale panel shows name /
+items / total / how long ago — tap to resume, bin icon to discard (confirm).
+Resuming while the cart has lines asks: hold the current one first (default)
+or discard it — never silently loses a cart. Unlimited holds.
+- `apps/desktop/src/lib/heldSales.ts` — localStorage `doka.held.<shopId>`,
+  survives restart. **Not synced, on purpose**: nothing is sold and no stock
+  moves until the sale is resumed and recorded normally, so the outbox and
+  server never see a hold. Cross-terminal resume would need a server table +
+  sync path — not built, not asked for.
+- Resumed lines re-read the item from the working set (price/floor changes
+  since the hold apply; the typed sale price is kept and re-validated).
+- Web dashboard unchanged (it doesn't sell).
+
 ### Parked (pick up later — do not lose)
 - Accountant verification of the actual tax rules entered (the page and the
   human-gate mechanism are done; the figures are still the Stage 6 draft

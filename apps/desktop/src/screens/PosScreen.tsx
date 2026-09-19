@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { IconBarcode, IconPlus, IconTrash } from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import { IconBarcode, IconPlayerPause, IconPlus, IconTrash } from "@tabler/icons-react";
 import type { ItemRow } from "@zogal/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, PAYMENT_LABEL, type Kobo, type PaymentType } from "@zogal/shared";
 import { announceStockChange, createCustomer, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
@@ -8,8 +8,9 @@ import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { CustomerPicker } from "@/components/CustomerPicker";
 import { PaymentTypePicker } from "@/components/PaymentTypePicker";
-import { Alert, Button, Card, CardContent, NumberField, Label, Separator, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
+import { Alert, Button, Card, CardContent, ConfirmDialog, NumberField, Label, Separator, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
 import { StaleNotice } from "@/components/StaleNotice";
+import { heldAgo, loadHeld, saveHeld, type HeldSale } from "@/lib/heldSales";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import type { OfflineCustomerRef } from "@/lib/shopView";
@@ -60,6 +61,47 @@ export function PosScreen() {
   const payMode = shop.preferences?.payment_type_mode ?? "optional";
   const [paymentType, setPaymentType] = useState<PaymentType | null>(payMode === "required" ? null : "cash");
   const resetPayment = () => setPaymentType(payMode === "required" ? null : "cash");
+
+  // Held sales: carts parked mid-sale, local to this terminal (see lib/heldSales).
+  const [held, setHeld] = useState<HeldSale[]>(() => loadHeld(shop.id));
+  useEffect(() => { saveHeld(shop.id, held); }, [shop.id, held]);
+  // Resume asked for while the cart still has lines — ask before losing anything.
+  const [resumeClash, setResumeClash] = useState<HeldSale | null>(null);
+  const [discardAsk, setDiscardAsk] = useState<HeldSale | null>(null);
+  // Tick once a minute so "4 min ago" stays honest while the list is visible.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (held.length === 0) return;
+    const t = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, [held.length]);
+
+  function clearCart() { setCart([]); setCustomer(null); resetPayment(); }
+
+  function holdSale() {
+    if (cart.length === 0) return;
+    const h: HeldSale = { id: crypto.randomUUID(), heldAt: new Date().toISOString(), lines: cart, customer, paymentType };
+    setHeld((hs) => [h, ...hs]);
+    clearCart();
+    notifyInfo("Sale held", `${customer ? customer.name : `${cart.length} item${cart.length === 1 ? "" : "s"}`} — resume it from “Held sales” when they're ready.`);
+  }
+
+  /** Put a held sale back into the cart. Items may have changed since it was held, so refresh each line from the working set. */
+  function resume(h: HeldSale) {
+    if (cart.length > 0) { setResumeClash(h); return; }
+    applyResume(h);
+  }
+  /** `holdCurrent`: park what's in the cart first (the clash dialog's default). */
+  function applyResume(h: HeldSale, holdCurrent = false) {
+    const parked: HeldSale | null = holdCurrent && cart.length > 0
+      ? { id: crypto.randomUUID(), heldAt: new Date().toISOString(), lines: cart, customer, paymentType }
+      : null;
+    setHeld((hs) => [...(parked ? [parked] : []), ...hs.filter((x) => x.id !== h.id)]);
+    setCart(h.lines.map((l) => ({ ...l, item: data.items.find((i) => i.id === l.item.id) ?? l.item })));
+    setCustomer(h.customer);
+    setPaymentType(h.paymentType ?? (payMode === "required" ? null : "cash"));
+    setResumeClash(null);
+  }
 
   function addToCart(item: ItemRow) {
     setCart((c) => {
@@ -268,6 +310,35 @@ export function PosScreen() {
 
         <aside className="border-l bg-card p-5 flex flex-col gap-3 overflow-y-auto">
           <h2 className="font-medium">Sale</h2>
+          {held.length > 0 && (
+            <div className="rounded-[10px] border bg-muted/40 p-3 grid gap-2">
+              <div className="text-caption text-muted-foreground">Held sales ({held.length})</div>
+              {held.map((h) => {
+                const n = h.lines.length;
+                const sum = addKobo(...h.lines.map((l) => { const x = lineNumbers(l); return x.quantity && x.unitPrice !== null ? mulKobo(x.unitPrice, x.quantity) : (0 as Kobo); }));
+                return (
+                  <div key={h.id} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="flex-1 min-w-0 text-left rounded-md px-2 py-1.5 hover:bg-background pressable disabled:opacity-50"
+                      disabled={busy || !can("sales.create")}
+                      onClick={() => resume(h)}
+                      title="Resume this sale"
+                    >
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium truncate">{h.customer?.name ?? "No name"}</span>
+                        <span className="tabular">{formatNaira(sum)}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{n} item{n === 1 ? "" : "s"} · {heldAgo(h.heldAt)} · tap to resume</div>
+                    </button>
+                    <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-destructive" aria-label="Discard held sale" onClick={() => setDiscardAsk(h)}>
+                      <IconTrash size={14} />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <CustomerPicker value={customer} onChange={setCustomer} disabled={busy || !can("sales.create")} />
           {cart.length === 0 && (
             <div className="text-sm text-muted-foreground flex items-center gap-2">
@@ -322,9 +393,35 @@ export function PosScreen() {
             <Button size="xl" className="w-full" disabled={busy || cart.length === 0 || cartProblems.length > 0 || !can("sales.create") || !writable || (payMode === "required" && !paymentType)} onClick={() => void checkout()}>
               {busy ? "Recording…" : payMode === "required" && !paymentType ? "Choose how they paid" : `Record ${PAYMENT_LABEL[paymentType ?? "cash"].toLowerCase()} sale`}
             </Button>
+            <Button variant="outline" className="w-full" disabled={busy || cart.length === 0} onClick={holdSale} title="Park this sale and serve the next customer">
+              <IconPlayerPause size={16} /> Hold sale
+            </Button>
           </div>
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={resumeClash !== null}
+        onOpenChange={(o) => !o && setResumeClash(null)}
+        title="There's a sale in progress"
+        description="Hold the current sale before bringing this one back, or discard what's in the cart?"
+        confirmLabel="Hold current, then resume"
+        onConfirm={() => applyResume(resumeClash!, true)}
+      >
+        <Button variant="ghost" className="text-destructive" onClick={() => applyResume(resumeClash!)}>
+          Discard current cart and resume
+        </Button>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={discardAsk !== null}
+        onOpenChange={(o) => !o && setDiscardAsk(null)}
+        title="Discard this held sale?"
+        description={discardAsk ? `${discardAsk.customer?.name ?? "No name"} · ${discardAsk.lines.length} item${discardAsk.lines.length === 1 ? "" : "s"}. Nothing was sold, so nothing is reversed — the items just won't come back.` : undefined}
+        confirmLabel="Discard"
+        destructive
+        onConfirm={() => { setHeld((hs) => hs.filter((x) => x.id !== discardAsk!.id)); setDiscardAsk(null); }}
+      />
 
       <AddItemDialog open={showAdd} onOpenChange={setShowAdd} onDone={async (name) => { setShowAdd(false); notifySuccess(`Added “${name}”`); await refresh(); }} />
     </div>
