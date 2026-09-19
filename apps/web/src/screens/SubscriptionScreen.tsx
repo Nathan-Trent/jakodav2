@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Badge, Button, Card, CardContent, notifyError, notifySuccess } from "@zogal/ui";
+import { Alert, Badge, Button, Card, CardContent, ConfirmDialog, notifyError, notifySuccess } from "@zogal/ui";
 import { PageHeader, Page } from "@/components/Shell";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
@@ -70,6 +70,23 @@ export function SubscriptionScreen() {
       if (r.url) window.location.assign(r.url); else notifyError(new Error(r.error ?? "Couldn't start payment"));
     } catch (e) { notifyError(e); }
     setPaying(null);
+  };
+
+  // Self-service plan change: raises a one-month invoice for the chosen
+  // plan under this shop and goes straight to paying it. The plan itself
+  // only changes once that payment lands (apply_payment) — same rule as
+  // every other invoice, just started by the owner instead of Zogal.
+  const [switchTo, setSwitchTo] = useState<Plan | null>(null);
+  const switchPlan = async () => {
+    if (!switchTo) return;
+    try {
+      const r = await payApi("/api/pay/change-plan", { shop_id: shop.id, plan_key: switchTo.key });
+      if (r.url) window.location.assign(r.url);
+      else { notifyError(new Error(r.error ?? "Couldn't start the plan change")); throw new Error("handled"); }
+    } catch (e) {
+      if (!(e instanceof Error && e.message === "handled")) notifyError(e);
+      throw e; // keeps the dialog open so they can try again rather than silently closing on failure
+    }
   };
 
   // Card on file: remove it, or turn automatic renewal off/on. Own rows only (RLS).
@@ -163,19 +180,28 @@ export function SubscriptionScreen() {
           <section className="grid gap-3">
             <h2 className="text-h3">Plans</h2>
             <div className="grid sm:grid-cols-3 gap-3">
-              {d.plans.map((p) => (
-                <Card key={p.key} className={`py-5 gap-0 ${p.key === s?.plan ? "border-brand-forest" : p.highlight ? "border-brand-coral/60" : ""}`}><CardContent className="px-5 grid gap-2">
-                  <div className="flex items-center justify-between"><div className="font-semibold">{p.name}</div>{p.key === s?.plan ? <Badge variant="success">Your plan</Badge> : p.highlight ? <Badge>Recommended</Badge> : null}</div>
-                  <div className="figure">{naira(p.price_monthly)}<span className="text-caption text-muted-foreground font-normal"> /month</span></div>
-                  {p.tagline && <div className="text-caption text-muted-foreground">{p.tagline}</div>}
-                  <ul className="text-small grid gap-0.5 mt-1">{(p.features ?? []).map((f, i) => <li key={i}>· {f}</li>)}</ul>
-                  <div className="text-caption text-muted-foreground">{p.limits?.terminals ?? "Unlimited"} terminal{p.limits?.terminals === 1 ? "" : "s"} · {p.limits?.staff ?? "Unlimited"} staff</div>
-                </CardContent></Card>
-              ))}
+              {d.plans.map((p) => {
+                const isCurrent = p.key === s?.plan;
+                return (
+                  <Card key={p.key} className={`py-5 gap-0 ${isCurrent ? "border-brand-forest" : p.highlight ? "border-brand-coral/60" : ""}`}><CardContent className="px-5 grid gap-2">
+                    <div className="flex items-center justify-between"><div className="font-semibold">{p.name}</div>{isCurrent ? <Badge variant="success">Your plan</Badge> : p.highlight ? <Badge>Recommended</Badge> : null}</div>
+                    <div className="figure">{naira(p.price_monthly)}<span className="text-caption text-muted-foreground font-normal"> /month</span></div>
+                    {p.tagline && <div className="text-caption text-muted-foreground">{p.tagline}</div>}
+                    <ul className="text-small grid gap-0.5 mt-1">{(p.features ?? []).map((f, i) => <li key={i}>· {f}</li>)}</ul>
+                    <div className="text-caption text-muted-foreground">{p.limits?.terminals ?? "Unlimited"} terminal{p.limits?.terminals === 1 ? "" : "s"} · {p.limits?.staff ?? "Unlimited"} staff</div>
+                    {!isCurrent && <Button variant="outline" className="mt-2" onClick={() => setSwitchTo(p)}>Switch to {p.name}</Button>}
+                  </CardContent></Card>
+                );
+              })}
             </div>
-            <p className="text-caption text-muted-foreground">To change plan, write to hello@getzogal.com — Zogal raises the invoice and you pay it here. Changing plans from this page arrives later.</p>
+            <p className="text-caption text-muted-foreground">Switching raises a one-month invoice at the new plan's price; the plan changes once it's paid. Questions first? hello@getzogal.com.</p>
           </section>
         )}
+
+        <ConfirmDialog open={!!switchTo} onOpenChange={(o) => { if (!o) setSwitchTo(null); }}
+          title={`Switch to ${switchTo?.name ?? ""}?`} confirmLabel={`Continue to pay ${switchTo ? naira(switchTo.price_monthly) : ""}`}
+          description={<>A one-month invoice for {switchTo ? naira(switchTo.price_monthly) : ""} is raised now, and you'll go straight to pay it. Your plan changes to <b>{switchTo?.name}</b> as soon as that payment is confirmed.</>}
+          onConfirm={switchPlan} />
 
         {d && d.invoices.length > 0 && (
           <section className="grid gap-3">
