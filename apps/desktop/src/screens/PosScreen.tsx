@@ -55,8 +55,11 @@ export function PosScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [lastScan, setLastScan] = useState<{ code: string; ok: boolean; name?: string } | null>(null);
   const [customer, setCustomer] = useState<OfflineCustomerRef | null>(null);
-  // How the customer paid. Cash preselected; one tap to change; resets after each sale.
-  const [paymentType, setPaymentType] = useState<PaymentType>("cash");
+  // How the customer paid. Owner's choice (0023): 'optional' assumes cash unless
+  // changed; 'required' makes the cashier pick every time. Resets after each sale.
+  const payMode = shop.preferences?.payment_type_mode ?? "optional";
+  const [paymentType, setPaymentType] = useState<PaymentType | null>(payMode === "required" ? null : "cash");
+  const resetPayment = () => setPaymentType(payMode === "required" ? null : "cash");
 
   function addToCart(item: ItemRow) {
     setCart((c) => {
@@ -150,13 +153,13 @@ export function PosScreen() {
         }
         const sale = await inventory.recordSale({
           shopId: shop.id, clientRef, soldBy: ctx.user.id,
-          deviceId: device?.device_id ?? null, soldAt, customerId, paymentType,
+          deviceId: device?.device_id ?? null, soldAt, customerId, paymentType: paymentType ?? "cash",
           lines: lines.map(({ item_id, quantity, unit_price }) => ({ item_id, quantity, unit_price })),
         });
         setCart([]);
         setCustomer(null);
-        setPaymentType("cash");
-        notifySuccess(`Sale recorded — ${formatNaira(toKobo(sale.total))}`, { description: `${PAYMENT_LABEL[paymentType]}${customer ? ` · for ${customer.name}` : ""}.` });
+        notifySuccess(`Sale recorded — ${formatNaira(toKobo(sale.total))}`, { description: `${PAYMENT_LABEL[paymentType ?? "cash"]}${customer ? ` · for ${customer.name}` : ""}.` });
+        resetPayment();
         await refresh();
         void announceStockChange(stockChannel(getSupabase(), shop.id), device?.device_id ?? null);
       } else {
@@ -164,14 +167,14 @@ export function PosScreen() {
           kind: "sale", clientRef, shopId: shop.id,
           deviceId: device?.device_id ?? null, userId: ctx.user.id, occurredAt: soldAt,
           // SYNC: the customer reference rides with the sale (0012 replay).
-          payload: { lines, note: null, customer, payment_type: paymentType },
+          payload: { lines, note: null, customer, payment_type: paymentType ?? "cash" },
         });
         // The overlay re-reads the outbox: stock, history and figures all
         // move at once, computed locally.
         await reloadOverlay();
         setCart([]);
         setCustomer(null);
-        setPaymentType("cash");
+        resetPayment();
         notifySuccess(`Sale saved — ${formatNaira(total)}`, {
           description: "Recorded on this terminal. It uploads automatically when the connection returns.",
         });
@@ -301,13 +304,23 @@ export function PosScreen() {
           <div className="mt-auto grid gap-2">
             {cartProblems.length > 0 && <p className="text-small text-destructive">{cartProblems[0]}</p>}
             <Separator />
-            <PaymentTypePicker value={paymentType} onChange={setPaymentType} disabled={busy || cart.length === 0} />
+            {payMode === "required" ? (
+              <div className="grid gap-1">
+                <Label className="text-caption text-muted-foreground">How did the customer pay?</Label>
+                <PaymentTypePicker value={paymentType} onChange={setPaymentType} disabled={busy || cart.length === 0} required />
+              </div>
+            ) : (
+              <details className="text-caption text-muted-foreground">
+                <summary className="cursor-pointer select-none">Paid by: <span className="font-semibold text-foreground">{PAYMENT_LABEL[paymentType ?? "cash"]}</span> — change</summary>
+                <div className="mt-2"><PaymentTypePicker value={paymentType} onChange={setPaymentType} disabled={busy} /></div>
+              </details>
+            )}
             <div className="flex justify-between items-baseline">
               <span className="text-subheading">Total</span>
               <span className="figure figure-lg">{formatNaira(total)}</span>
             </div>
-            <Button size="xl" className="w-full" disabled={busy || cart.length === 0 || cartProblems.length > 0 || !can("sales.create") || !writable} onClick={() => void checkout()}>
-              {busy ? "Recording…" : `Record ${PAYMENT_LABEL[paymentType].toLowerCase()} sale`}
+            <Button size="xl" className="w-full" disabled={busy || cart.length === 0 || cartProblems.length > 0 || !can("sales.create") || !writable || (payMode === "required" && !paymentType)} onClick={() => void checkout()}>
+              {busy ? "Recording…" : payMode === "required" && !paymentType ? "Choose how they paid" : `Record ${PAYMENT_LABEL[paymentType ?? "cash"].toLowerCase()} sale`}
             </Button>
           </div>
         </aside>

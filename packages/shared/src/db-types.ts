@@ -15,12 +15,20 @@ export type ISOTimestamp = string;
 /** DB numeric(14,2) as returned by PostgREST. */
 export type NumericString = string;
 
+/** Owner-set preferences (0023). */
+export interface ShopPreferences {
+  /** 'optional' (default): sales record as cash unless changed. 'required': the cashier must choose every time. */
+  payment_type_mode?: "optional" | "required";
+}
+
 export interface ShopRow {
   id: UUID;
   name: string;
   timezone: string;
   currency: string;
   is_active: boolean;
+  /** Owner choices about how the shop runs (0023). Absent before the migration. */
+  preferences?: ShopPreferences;
   created_at: ISOTimestamp;
   updated_at: ISOTimestamp;
 }

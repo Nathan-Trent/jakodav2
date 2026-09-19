@@ -143,3 +143,8 @@ export function PageHeader({ title, description, actions }: { title: string; des
     </div>
   );
 }
+
+/** Content padding that matches PageHeader. Same shape as the dashboard's, so screens port between the apps unchanged. */
+export function Page({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("px-8 pb-8 grid gap-4", className)}>{children}</div>;
+}

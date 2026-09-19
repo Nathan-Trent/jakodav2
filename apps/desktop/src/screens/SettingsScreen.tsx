@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Button, Card, CardContent, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
-import { PageHeader, Page } from "@/components/Shell";
+import { PageHeader, Page } from "@/components/AppShell";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 

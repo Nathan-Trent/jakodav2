@@ -47,15 +47,12 @@ export const NAV: NavItem[] = [
   { key: "items", label: "Items", icon: IconBox },
   { key: "purchases", label: "Purchases", icon: IconTruckDelivery, anyOf: ["purchases.create"] },
   { key: "expenses", label: "Expenses", icon: IconCash, anyOf: ["expenses.create", "expenses.view"] },
-  { key: "staff", label: "Staff", icon: IconUsers, anyOf: ["users.manage"],
-    comingIn: { stage: 8, what: "Invite staff, roles, per-person permissions, manager PINs" } },
+  { key: "staff", label: "Staff", icon: IconUsers, anyOf: ["users.manage"] },
   { key: "devices", label: "Terminals", icon: IconDeviceDesktop, anyOf: ["shop.settings"] },
   { key: "conflicts", label: "Sync issues", icon: IconAlertTriangle, anyOf: ["reports.view"] },
-  { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"],
-    comingIn: { stage: 8, what: "Sales, profit, stock and staff performance over any period" } },
+  { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"] },
   { key: "tax", label: "Tax", icon: IconReceiptTax, anyOf: ["tax.view"] },
-  { key: "settings", label: "Settings", icon: IconSettings, anyOf: ["shop.settings"],
-    comingIn: { stage: 8, what: "Shop details, receipts, subscription" } },
+  { key: "settings", label: "Settings", icon: IconSettings, anyOf: ["shop.settings"] },
 ];
 
 export const RECEIPT_ICON = IconReceipt;

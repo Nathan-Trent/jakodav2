@@ -637,6 +637,12 @@ Done 2026-09-20 — main app:
   "Paid by" tab + CSV. Desktop tag v0.3.7 waits for 0022 (the app sends the
   new parameter; without 0022 record_sale has no matching signature).
 
+- Desktop: Staff, Reports, Settings no longer "coming soon" — ported from
+  the dashboard (same components, same RPCs; online-only and say so).
+- Shop preference (0023) `payment_type_mode`: optional (default — cash
+  assumed, "Paid by: Cash — change" in the cart) or required (cashier must
+  pick; button reads "Choose how they paid"). Set in Settings on both apps.
+
 ### Parked (pick up later — do not lose)
 - Self-service plan change from the dashboard (today: Zogal raises invoice).
 - §8.1 tax rules verification page; Nielsen/Norman pass on every screen.
