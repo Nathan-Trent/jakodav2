@@ -24,14 +24,16 @@ export class AuthRepository {
 
   // ---- login mechanism (Supabase Auth) -----------------------------------
 
-  async signUp(input: { email: string; password: string; fullName: string }): Promise<void> {
-    const { error } = await this.db.auth.signUp({
+  /** Returns whether a session came back immediately (email confirmation off) so the screen can say the right thing rather than always "check your email". */
+  async signUp(input: { email: string; password: string; fullName: string }): Promise<{ session: Session | null }> {
+    const { data, error } = await this.db.auth.signUp({
       email: email.parse(input.email),
       password: input.password,
       // picked up by handle_new_auth_user() → public.users.full_name
       options: { data: { full_name: input.fullName.trim() } },
     });
     if (error) throw error;
+    return { session: data.session };
   }
 
   async signIn(input: { email: string; password: string }): Promise<Session> {
