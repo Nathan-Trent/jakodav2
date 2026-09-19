@@ -594,6 +594,11 @@ Marketing slice, retire /admin, §8.1 tax page.
 Rule: payments are SUBSCRIPTION ONLY — shops pay Zogal for Doka. Doka never
 moves money between a shop and its customers.
 
+Done 2026-09-19 (late): step 1 (back office client-first, live, jobs) and
+step 2 (payments.provider switch, single Pay button) — deployed; 0018 + 0019
+applied. v0.3.5 fixes the clipped sidebar footer. QStash schedule NOT yet
+created (Nathan, later) — jobs still run via the JOBS_SECRET kick.
+
 ### Parked (pick up later — do not lose)
 - Payment TYPE on each sale (cash / transfer / card / POS): local SQLite
   column, outbox + record_sale RPC, receipt, Sales history filter, Reports
