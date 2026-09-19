@@ -599,14 +599,36 @@ step 2 (payments.provider switch, single Pay button) — deployed; 0018 + 0019
 applied. v0.3.5 fixes the clipped sidebar footer. QStash schedule NOT yet
 created (Nathan, later) — jobs still run via the JOBS_SECRET kick.
 
+Done 2026-09-20 (overnight) — BACK OFFICE COMPLETE:
+- Step 3 recurring billing (0020): card token captured on the first online
+  payment (Paystack authorization_code / Flutterwave card token) into
+  payment_methods; daily `renew` job raises the next invoice ≤3 days before
+  expiry and charges the token with the ACTIVE provider, 3 tries with owner +
+  staff told; `remind` job 7/1/0 days for shops with no card; the runner
+  queues both daily jobs itself (ensureDailyJobs) so QStash only ticks.
+  Dashboard: card on file, auto-renew on/off, remove card. Shop page shows
+  the card; Finance shows renewal state.
+- Step 4: Presence (notices + impersonation bar) pushed by Realtime in the
+  desktop app (v0.3.6) and the dashboard — the 5-minute poll is gone. The
+  sync engine's own cadence is unchanged (offline-first, by design).
+- Marketing slice (0021): every sentence on business.getzogal.com is a field
+  in site_content (schema in lib/content-schema.ts, IDENTICAL in both repos);
+  the site reads live rows over built-in defaults, revalidates every minute
+  and on publish (/api/revalidate + SITE_REVALIDATE_TOKEN). Back office:
+  Marketing → Zogal Business site / Doka page editors (draft, diff vs live,
+  publish with note + history, discard), Inbox (contact form → reply by
+  email wearing the page's identity, archive; staff told on each tick).
+  Contact form on the Doka page (submit_contact: shape + 5/IP/hour).
+- doka.zogal.app/admin retired: shows a pointer to ops.business.zogal.app;
+  admin screens deleted.
+Nathan: run 0020 and 0021; set SITE_REVALIDATE_TOKEN on BOTH Vercel projects
+(same value); create the QStash schedule when ready.
+
 ### Parked (pick up later — do not lose)
 - Payment TYPE on each sale (cash / transfer / card / POS): local SQLite
   column, outbox + record_sale RPC, receipt, Sales history filter, Reports
   split. Touches the sync path — its own unit.
 - Self-service plan change from the dashboard (today: Zogal raises invoice).
-- Renewal reminders 7/1/0 days (folds into the QStash renewal job).
-- Marketing slice (site copy in DB, draft→publish, contact inbox + reply).
-- Retire doka.zogal.app/admin once Finance covers it (it does now — remove).
 - §8.1 tax rules verification page; Nielsen/Norman pass on every screen.
 - Device credential to OS secure store; rate-limit activate_device;
   accountant verification of tax rules.
