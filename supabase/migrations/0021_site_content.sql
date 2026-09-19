@@ -69,6 +69,7 @@ create table public.contact_messages (
   answered_by uuid references public.users(id),
   answered_at timestamptz,
   ip          inet,
+  notified_at timestamptz,                       -- when staff were told (the job runner does this)
   created_at  timestamptz not null default now()
 );
 create index contact_messages_status_idx on public.contact_messages (status, created_at desc);
