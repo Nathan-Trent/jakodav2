@@ -49,7 +49,10 @@ function Router() {
   const { gate } = useSync();
   const [page, setPage] = useState<PageKey>("dashboard");
 
-  if (status === "loading") {
+  // device is undefined until the one-time read of the OS credential store
+  // resolves — wait for it too, so an already-activated till never flashes
+  // "not activated" before its binding loads.
+  if (status === "loading" || device === undefined) {
     return <LoadingMark label="Starting up…" />;
   }
   if (status === "signed-out") return <LoginScreen />;

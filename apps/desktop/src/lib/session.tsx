@@ -13,7 +13,8 @@ interface SessionState {
   /** `unreachable`: there is a session but the server can't be reached and nothing is cached — show a connection screen, never a blank one. */
   status: "loading" | "signed-out" | "signed-in" | "unreachable";
   ctx: MyContext | null;
-  device: DeviceActivation | null;
+  /** `undefined` = still reading the OS credential store; not yet known whether this till is activated. */
+  device: DeviceActivation | null | undefined;
   /** The membership matching the activated device's shop (or the only one). */
   active: Membership | null;
   auth: AuthRepository;
@@ -39,8 +40,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const [status, setStatus] = useState<SessionState["status"]>("loading");
   const [ctx, setCtx] = useState<MyContext | null>(null);
-  const [device, setDeviceState] = useState<DeviceActivation | null>(() => loadDevice());
+  // undefined until the one-time async read of the OS credential store resolves.
+  const [device, setDeviceState] = useState<DeviceActivation | null | undefined>(undefined);
+  const deviceRef = useRef<DeviceActivation | null>(null);
   const signinRecorded = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadDevice().then((d) => { if (!cancelled) { deviceRef.current = d; setDeviceState(d); } });
+    return () => { cancelled = true; };
+  }, []);
 
   /**
    * SYNC / offline: the till must open with no network once it has signed in
@@ -55,7 +64,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setStatus("signed-in");
       try { localStorage.setItem(CTX_KEY, JSON.stringify(c)); } catch { /* ignore */ }
       // Once per app start: tell the back office where this sign-in is (0016).
-      if (!signinRecorded.current) { signinRecorded.current = true; void recordSignin(db, "desktop", loadDevice()?.shop_id ?? null); }
+      if (!signinRecorded.current) { signinRecorded.current = true; void recordSignin(db, "desktop", deviceRef.current?.shop_id ?? null); }
     } catch (e) {
       const network = isNetworkError(e);
       console.error("bootstrap failed", e);
@@ -85,9 +94,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [db, refresh]);
 
   const setDevice = useCallback((d: DeviceActivation | null) => {
-    if (d) saveDevice(d);
-    else clearDevice();
-    setDeviceState(d);
+    deviceRef.current = d;
+    setDeviceState(d); // update the screen at once; the keyring write happens alongside
+    void (d ? saveDevice(d) : clearDevice());
   }, []);
 
   const active = useMemo<Membership | null>(() => {

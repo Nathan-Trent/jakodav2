@@ -1,44 +1,71 @@
+import { getPassword, setPassword, deletePassword } from "tauri-plugin-keyring-api";
 import type { DeviceActivation } from "@zogal/auth-permissions";
+import { isTauri } from "@/lib/updater";
 
 /**
  * Persisted device binding (TRD §1 activation flow). The credential is
  * returned exactly once by activate_device(); if this is lost the device
  * must be re-activated with a new code.
  *
- * Stage 3: localStorage (webview-scoped, survives restarts).
- * Stage 5 TODO: move to tauri-plugin-store / OS keychain so it isn't readable
- * from devtools, and so the SYNC layer can read it from the native side.
+ * Stage 5: the OS's own credential store (Windows Credential Manager /
+ * macOS Keychain / Linux Secret Service via tauri-plugin-keyring), scoped
+ * to the OS user account that installed Doka — not readable from devtools
+ * or the app's own storage folder the way localStorage was.
+ *
+ * The web/POS build has no native keyring (it's a browser tab, not Tauri),
+ * so it keeps using localStorage — same tradeoff it always had.
  */
-const KEY = "zogal.device";
-/** Pre-rename key. Read once so the Jakoda→Zogal rename doesn't un-bind a live terminal. */
-const LEGACY_KEY = "jakoda.device";
+const SERVICE = "app.zogal.doka.device";
+const USER = "credential";
+/** Pre-Stage-5 storage. Read once on first launch after the upgrade so an
+ *  already-activated till isn't asked to re-activate; then moved into the
+ *  keyring and never read again. */
+const LEGACY_KEYS = ["zogal.device", "jakoda.device"];
 
-export function loadDevice(): DeviceActivation | null {
+function parse(raw: string | null): DeviceActivation | null {
+  if (!raw) return null;
   try {
-    let raw = localStorage.getItem(KEY);
-    if (!raw) {
-      const legacy = localStorage.getItem(LEGACY_KEY);
-      if (legacy) {
-        localStorage.setItem(KEY, legacy);
-        localStorage.removeItem(LEGACY_KEY);
-        raw = legacy;
-      }
-    }
-    if (!raw) return null;
     const v = JSON.parse(raw) as Partial<DeviceActivation>;
-    if (v.device_id && v.shop_id && v.credential) return v as DeviceActivation;
-    return null;
+    return v.device_id && v.shop_id && v.credential ? (v as DeviceActivation) : null;
   } catch {
     return null;
   }
 }
 
-export function saveDevice(d: DeviceActivation): void {
-  localStorage.setItem(KEY, JSON.stringify(d));
+function loadLegacyLocalStorage(): DeviceActivation | null {
+  for (const key of LEGACY_KEYS) {
+    const d = parse(localStorage.getItem(key));
+    if (d) return d;
+  }
+  return null;
 }
 
-export function clearDevice(): void {
-  localStorage.removeItem(KEY);
+export async function loadDevice(): Promise<DeviceActivation | null> {
+  if (!isTauri()) return loadLegacyLocalStorage(); // POS web build: no native keyring available
+  try {
+    const raw = await getPassword(SERVICE, USER);
+    const fromKeyring = parse(raw);
+    if (fromKeyring) return fromKeyring;
+  } catch (e) {
+    console.error("keyring read failed", e); // fall through to the one-time migration below
+  }
+  // One-time migration from the pre-Stage-5 localStorage binding.
+  const legacy = loadLegacyLocalStorage();
+  if (legacy) {
+    await saveDevice(legacy);
+    for (const key of LEGACY_KEYS) localStorage.removeItem(key);
+  }
+  return legacy;
+}
+
+export async function saveDevice(d: DeviceActivation): Promise<void> {
+  if (!isTauri()) { localStorage.setItem(LEGACY_KEYS[0]!, JSON.stringify(d)); return; }
+  await setPassword(SERVICE, USER, JSON.stringify(d));
+}
+
+export async function clearDevice(): Promise<void> {
+  if (!isTauri()) { localStorage.removeItem(LEGACY_KEYS[0]!); return; }
+  try { await deletePassword(SERVICE, USER); } catch { /* nothing to delete is fine */ }
 }
 
 /** Best-effort human name for this terminal, editable at activation. */

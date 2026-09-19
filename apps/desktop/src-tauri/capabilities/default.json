@@ -8,6 +8,9 @@
   "permissions": [
     "core:default",
     "updater:default",
-    "process:default"
+    "process:default",
+    "keyring:allow-get-password",
+    "keyring:allow-set-password",
+    "keyring:allow-delete-password"
   ]
 }

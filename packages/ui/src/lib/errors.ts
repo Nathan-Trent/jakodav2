@@ -30,6 +30,7 @@ export function friendlyError(e: unknown): FriendlyError {
   if (/invalid PIN/i.test(raw)) return { title: "PIN not recognised", action: "Ask the manager to check their current PIN in their own login — PINs rotate weekly." };
   if (/too many failed PIN attempts/i.test(raw)) return { title: "Too many PIN attempts", action: "Wait 15 minutes, then try again." };
   if (/invalid or expired activation code/i.test(raw)) return { title: "Activation code not valid", action: "Codes last 10 minutes. Ask the owner to generate a new one." };
+  if (/too many attempts; wait 15 minutes/i.test(raw)) return { title: "Too many tries", action: "Wait 15 minutes, then try the code again." };
   if (/unknown or revoked device/i.test(raw)) return { title: "This terminal has been revoked", action: "Ask the owner to activate it again." };
   if (/permission denied: ([\w.]+)/.test(raw)) {
     const perm = raw.match(/permission denied: ([\w.]+)/)![1]!;
