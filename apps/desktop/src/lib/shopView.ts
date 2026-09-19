@@ -1,4 +1,4 @@
-import type { BarcodeRow, BatchRow, CustomerRow, ItemRow, PurchaseRow, SaleRow } from "@zogal/shared";
+import type { PaymentType, BarcodeRow, BatchRow, CustomerRow, ItemRow, PurchaseRow, SaleRow } from "@zogal/shared";
 import type { DeviceStatusRow } from "@zogal/auth-permissions";
 import { toKobo } from "@zogal/shared";
 import { allocateFifo, applyAllocation, cogs, type OpenBatch, type ShopDashboard } from "@zogal/inventory-batches";
@@ -85,6 +85,8 @@ export interface OfflineSalePayload {
   lines: { item_id: string; quantity: number; unit_price: string; floor_price_at_sale: string }[];
   note: string | null;
   customer?: OfflineCustomerRef | null;
+  /** SYNC: how the customer paid (0022). Absent on entries queued before it → cash. */
+  payment_type?: PaymentType;
 }
 
 export const EMPTY_SNAPSHOT: ShopSnapshot = { items: [], barcodes: [], stock: {}, stockValue: {}, batches: [], purchases: [], sales: [], dashboard: null, devices: [], tax: null, expenses: [], customers: [] };
@@ -117,7 +119,7 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
       return {
         id: e.clientRef, shop_id: e.shopId, client_ref: e.clientRef, sold_by: e.userId,
         device_id: e.deviceId, sold_at: e.occurredAt, status: "completed" as const,
-        total: (total / 100).toFixed(2), note: e.payload.note,
+        total: (total / 100).toFixed(2), note: e.payload.note, payment_type: e.payload.payment_type ?? "cash",
         customer_id: e.payload.customer && "id" in e.payload.customer ? e.payload.customer.id : null,
         created_at: e.occurredAt, updated_at: e.occurredAt,
         pending: true, lines: e.payload.lines,

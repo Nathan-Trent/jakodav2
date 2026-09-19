@@ -8,6 +8,8 @@ export interface ShopReport {
   by_terminal: { device_id: string; name: string; sales_count: number; revenue: number | string }[];
   by_item: { item_id: string; name: string; units: number; revenue: number | string; gross_profit: number | string | null; on_hand: number }[];
   by_customer: { customer_id: string; name: string; sales_count: number; revenue: number | string }[];
+  /** Takings by how customers paid (0022). Absent before the migration runs. */
+  by_payment?: { payment_type: 'cash' | 'transfer' | 'card' | 'pos'; sales_count: number; revenue: number | string }[];
   expenses_by_category: { category: string; amount: number | string }[];
   by_day: { day: string; revenue: number | string; count: number }[];
 }

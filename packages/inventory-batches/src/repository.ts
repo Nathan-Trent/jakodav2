@@ -96,6 +96,7 @@ export class InventoryRepository {
       p_note: v.note ?? null,
       p_device_id: v.deviceId ?? null,
       p_customer_id: v.customerId ?? null,
+      p_payment_type: v.paymentType ?? 'cash',
     });
     if (error) throw error;
     return data as SaleRow;

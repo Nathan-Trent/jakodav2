@@ -28,13 +28,14 @@ export interface SaleHistoryRow {
   total: NumericString;
   note: string | null;
   status: "completed" | "voided";
+  payment_type: "cash" | "transfer" | "card" | "pos";
   users: { full_name: string } | null;
   customers: { name: string; phone: string | null } | null;
   sale_lines: SaleHistoryLine[];
 }
 
 const SELECT =
-  "id, client_ref, sold_at, sold_by, device_id, customer_id, total, note, status, " +
+  "id, client_ref, sold_at, sold_by, device_id, customer_id, total, note, status, payment_type, " +
   "users!sales_sold_by_fkey(full_name), customers(name, phone), " +
   "sale_lines(id, item_id, quantity, unit_price, floor_price_at_sale, items(name), sale_line_allocations(quantity, unit_cost))";
 

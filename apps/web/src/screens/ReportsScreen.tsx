@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { IconDownload } from "@tabler/icons-react";
-import { formatNaira, type Kobo } from "@zogal/shared";
+import { formatNaira, PAYMENT_LABEL, type Kobo } from "@zogal/shared";
 import { fetchShopReport, type ShopReport } from "@zogal/inventory-batches";
 import { Alert, Button, Card, CardContent, PeriodPicker, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, describeRange, resolvePreset, type PeriodRange } from "@zogal/ui";
 import { PageHeader, Page } from "@/components/Shell";
@@ -9,7 +9,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useAsync, money } from "@/lib/useAsync";
 
 const k = (v: number | string | null | undefined): Kobo => Math.round(money(v) * 100) as Kobo;
-type Tab = "items" | "sellers" | "terminals" | "customers" | "expenses";
+type Tab = "items" | "sellers" | "terminals" | "payments" | "customers" | "expenses";
 
 /** Reports (PRD §6.7 reporting): what sold, who sold it, where, and what it cost — for any period. */
 export function ReportsScreen() {
@@ -25,6 +25,7 @@ export function ReportsScreen() {
     { key: "items", label: "Items", show: true },
     { key: "sellers", label: "Sellers", show: active!.permissions.includes("reports.view_staff_perf") },
     { key: "terminals", label: "Terminals", show: true },
+    { key: "payments", label: "Paid by", show: true },
     { key: "customers", label: "Customers", show: true },
     { key: "expenses", label: "Expenses", show: viewCost },
   ];
@@ -63,6 +64,11 @@ export function ReportsScreen() {
                 <Table><TableHeader><TableRow><TableHead className="pl-5">Terminal</TableHead><TableHead className="text-right">Sales</TableHead><TableHead className="text-right pr-5">Revenue</TableHead></TableRow></TableHeader>
                   <TableBody>{r.by_terminal.length === 0 && <Empty cols={3} />}{r.by_terminal.map((x) => (
                     <TableRow key={x.device_id}><TableCell className="pl-5 font-semibold">{x.name}</TableCell><TableCell className="text-right tabular">{x.sales_count}</TableCell><TableCell className="text-right pr-5 tabular font-semibold">{formatNaira(k(x.revenue))}</TableCell></TableRow>
+                  ))}</TableBody></Table>
+              ) : tab === "payments" ? (
+                <Table><TableHeader><TableRow><TableHead className="pl-5">Paid by</TableHead><TableHead className="text-right">Sales</TableHead><TableHead className="text-right pr-5">Takings</TableHead></TableRow></TableHeader>
+                  <TableBody>{(r.by_payment ?? []).length === 0 && <Empty cols={3} text="No sales in this period." />}{(r.by_payment ?? []).map((x) => (
+                    <TableRow key={x.payment_type}><TableCell className="pl-5 font-semibold">{PAYMENT_LABEL[x.payment_type]}</TableCell><TableCell className="text-right tabular">{x.sales_count}</TableCell><TableCell className="text-right pr-5 tabular font-semibold">{formatNaira(k(x.revenue))}</TableCell></TableRow>
                   ))}</TableBody></Table>
               ) : tab === "customers" ? (
                 <Table><TableHeader><TableRow><TableHead className="pl-5">Customer</TableHead><TableHead className="text-right">Sales</TableHead><TableHead className="text-right pr-5">Revenue</TableHead></TableRow></TableHeader>
@@ -105,6 +111,7 @@ function downloadCsv(r: ShopReport, tab: Tab, shopName: string) {
     tab === "items" ? [["Item", "Units", "Revenue", "Gross profit", "On hand"], ...r.by_item.map((x) => [x.name, x.units, money(x.revenue), money(x.gross_profit), x.on_hand])]
     : tab === "sellers" ? [["Seller", "Sales", "Units", "Revenue", "Gross profit"], ...r.by_seller.map((x) => [x.name, x.sales_count, x.units, money(x.revenue), money(x.gross_profit)])]
     : tab === "terminals" ? [["Terminal", "Sales", "Revenue"], ...r.by_terminal.map((x) => [x.name, x.sales_count, money(x.revenue)])]
+    : tab === "payments" ? [["Paid by", "Sales", "Takings"], ...(r.by_payment ?? []).map((x) => [PAYMENT_LABEL[x.payment_type], x.sales_count, money(x.revenue)])]
     : tab === "customers" ? [["Customer", "Sales", "Revenue"], ...r.by_customer.map((x) => [x.name, x.sales_count, money(x.revenue)])]
     : [["Category", "Amount"], ...r.expenses_by_category.map((x) => [x.category, money(x.amount)])];
   const csv = rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");

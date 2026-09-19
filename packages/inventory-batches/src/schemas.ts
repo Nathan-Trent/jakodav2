@@ -55,6 +55,8 @@ export const NewSaleSchema = z.object({
   note: z.string().trim().max(1000).optional(),
   /** Optional customer (0012). Omit for a walk-in. */
   customerId: z.uuid().nullable().optional(),
+  /** How the customer paid (0022). Defaults to cash on the server too. */
+  paymentType: z.enum(['cash', 'transfer', 'card', 'pos']).optional(),
   lines: z.array(SaleLineInputSchema).min(1),
 });
 export type NewSale = z.infer<typeof NewSaleSchema>;

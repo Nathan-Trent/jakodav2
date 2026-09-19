@@ -1,3 +1,4 @@
+import type { PaymentType } from "./payment.js";
 /**
  * Row types mirroring supabase/migrations/0001_foundation.sql.
  *
@@ -143,6 +144,8 @@ export interface SaleRow {
   note: string | null;
   /** Null = walk-in. Optional customer attached at the till (0012). */
   customer_id: UUID | null;
+  /** How the customer paid (0022). */
+  payment_type: PaymentType;
   created_at: ISOTimestamp;
   updated_at: ISOTimestamp;
 }

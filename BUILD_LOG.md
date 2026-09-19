@@ -624,10 +624,20 @@ Done 2026-09-20 (overnight) — BACK OFFICE COMPLETE:
 Nathan: run 0020 and 0021; set SITE_REVALIDATE_TOKEN on BOTH Vercel projects
 (same value); create the QStash schedule when ready.
 
+Done 2026-09-20 — main app:
+- Web signup dead end fixed: signed in with no shop → Create your shop
+  (create_shop RPC) instead of "install the desktop app". Back office Users
+  lists every person with a "No shop yet" pill + filter (stalled sign-ups).
+- Payment type per sale (0022): sales.payment_type cash|transfer|card|pos;
+  record_sale + replay_offline_sale take p_payment_type (SYNC: rides in the
+  outbox payload as payment_type; older queued entries replay as cash);
+  PaymentTypePicker in the Sell cart (cash preselected, radio group, arrow
+  keys); "Record cash sale" button; Sales history column + filter + detail;
+  shop_report() wrapped (v1 kept) to add by_payment; dashboard Reports
+  "Paid by" tab + CSV. Desktop tag v0.3.7 waits for 0022 (the app sends the
+  new parameter; without 0022 record_sale has no matching signature).
+
 ### Parked (pick up later — do not lose)
-- Payment TYPE on each sale (cash / transfer / card / POS): local SQLite
-  column, outbox + record_sale RPC, receipt, Sales history filter, Reports
-  split. Touches the sync path — its own unit.
 - Self-service plan change from the dashboard (today: Zogal raises invoice).
 - §8.1 tax rules verification page; Nielsen/Norman pass on every screen.
 - Device credential to OS secure store; rate-limit activate_device;

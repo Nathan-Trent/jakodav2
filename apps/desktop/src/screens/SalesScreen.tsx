@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { IconCloudUpload, IconSearch } from "@tabler/icons-react";
 import { formatNaira, toKobo, type Kobo } from "@zogal/shared";
+import { PAYMENT_LABEL, PAYMENT_TYPES, type PaymentType } from "@zogal/shared";
 import { fetchSalesHistory, summariseLines, type SaleHistoryRow } from "@zogal/inventory-batches";
 import { cacheKey, readThrough } from "@zogal/sync";
 import { PageHeader } from "@/components/AppShell";
@@ -26,6 +27,7 @@ export interface SaleView {
   /** FIFO cost of the sale; null when the caller can't see costs or it's unsent. */
   cost: Kobo | null;
   pending: boolean;
+  payment_type: PaymentType;
 }
 
 function fromServer(r: SaleHistoryRow, viewCost: boolean): SaleView {
@@ -42,7 +44,7 @@ function fromServer(r: SaleHistoryRow, viewCost: boolean): SaleView {
     id: r.id, sold_at: r.sold_at, total: toKobo(r.total),
     seller: r.users?.full_name ?? null, seller_id: r.sold_by, device_id: r.device_id,
     customer_id: r.customer_id, customer: r.customers?.name ?? null, note: r.note,
-    lines, cost: cost as Kobo | null, pending: false,
+    lines, cost: cost as Kobo | null, pending: false, payment_type: r.payment_type ?? "cash",
   };
 }
 
@@ -66,6 +68,7 @@ export function SalesScreen({ customerId, embedded }: { customerId?: string; emb
 
   const [period, setPeriod] = useState<PeriodRange>(() => resolvePreset(customerId ? "this_year" : "today"));
   const [terminal, setTerminal] = useState<string | null>(null);
+  const [payType, setPayType] = useState<PaymentType | "">("");
   const [seller, setSeller] = useState<string>("");
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<{ list: SaleView[]; fromCache: boolean } | null>(null);
@@ -99,7 +102,7 @@ export function SalesScreen({ customerId, embedded }: { customerId?: string; emb
         seller: me && s.sold_by === me.id ? (me.full_name ?? "You") : null, seller_id: s.sold_by,
         device_id: s.device_id, customer_id: s.customer_id, customer: s.customer_name ?? null, note: s.note,
         lines: (s.lines ?? []).map((l) => ({ name: data.items.find((i) => i.id === l.item_id)?.name ?? "Item", quantity: l.quantity, unit_price: toKobo(l.unit_price) })),
-        cost: null, pending: true,
+        cost: null, pending: true, payment_type: s.payment_type ?? "cash",
       }));
   }, [data.sales, data.items, period.from, period.to, customerId, me]);
 
@@ -116,6 +119,7 @@ export function SalesScreen({ customerId, embedded }: { customerId?: string; emb
 
   const needle = q.trim().toLowerCase();
   const shown = all.filter((s) =>
+    (!payType || s.payment_type === payType) &&
     (!terminal || s.device_id === terminal) &&
     (!seller || s.seller_id === seller) &&
     (!needle || s.customer?.toLowerCase().includes(needle) || s.seller?.toLowerCase().includes(needle) || s.lines.some((l) => l.name.toLowerCase().includes(needle))),
@@ -171,6 +175,10 @@ export function SalesScreen({ customerId, embedded }: { customerId?: string; emb
                 {sellers.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
               </select>
             )}
+            <select className="h-9 rounded-md border bg-card px-2 text-sm text-foreground" value={payType} onChange={(e) => setPayType(e.target.value as PaymentType | "")} aria-label="Filter by how they paid">
+              <option value="">All payments</option>
+              {PAYMENT_TYPES.map((t) => <option key={t} value={t}>{PAYMENT_LABEL[t]}</option>)}
+            </select>
             {viewAll && <TerminalFilter value={terminal} onChange={setTerminal} />}
           </div>
         </div>
@@ -180,13 +188,14 @@ export function SalesScreen({ customerId, embedded }: { customerId?: string; emb
               <TableHead className="pl-5">When</TableHead>
               <TableHead>Items</TableHead>
               {!customerId && <TableHead>Customer</TableHead>}
+              <TableHead>Paid by</TableHead>
               {viewAll && <TableHead>Seller</TableHead>}
               <TableHead className="text-right pr-5">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {shown.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="pl-5 text-muted-foreground">
+              <TableRow><TableCell colSpan={6} className="pl-5 text-muted-foreground">
                 {loading ? "Loading…" : `No sales ${describeRange(period).toLowerCase()}${needle ? ` matching “${q}”` : ""}.`}
               </TableCell></TableRow>
             )}
@@ -198,6 +207,7 @@ export function SalesScreen({ customerId, embedded }: { customerId?: string; emb
                 </TableCell>
                 <TableCell className="max-w-[360px] truncate font-medium">{summariseLines(s.lines)}</TableCell>
                 {!customerId && <TableCell className="text-muted-foreground">{s.customer ?? "Walk-in"}</TableCell>}
+                <TableCell className="text-muted-foreground">{PAYMENT_LABEL[s.payment_type]}</TableCell>
                 {viewAll && <TableCell className="text-muted-foreground">{s.seller ?? "—"}{!terminal && terminalName(s.device_id) ? ` · ${terminalName(s.device_id)}` : ""}</TableCell>}
                 <TableCell className="text-right pr-5 tabular font-semibold">{formatNaira(s.total)}</TableCell>
               </TableRow>
@@ -244,7 +254,7 @@ function SaleDetailDialog({ sale, viewCost, terminal, onClose }: { sale: SaleVie
         </DialogHeader>
         <div className="grid gap-3">
           {sale.pending && <Badge variant="warning" className="w-fit"><IconCloudUpload size={12} /> Recorded on this terminal — uploads when the connection returns</Badge>}
-          <div className="text-small"><span className="text-muted-foreground">Customer:</span> {sale.customer ?? "Walk-in"}</div>
+          <div className="text-small"><span className="text-muted-foreground">Customer:</span> {sale.customer ?? "Walk-in"} · <span className="text-muted-foreground">Paid by:</span> {PAYMENT_LABEL[sale.payment_type]}</div>
           <ul className="divide-y rounded-[10px] border">
             {sale.lines.map((l, i) => (
               <li key={i} className="flex items-center gap-3 px-3 py-2 text-small">

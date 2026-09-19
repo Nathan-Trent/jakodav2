@@ -195,15 +195,22 @@ end $$;
 revoke all on function public.replay_offline_sale(uuid, uuid, uuid, jsonb, timestamptz, uuid, text, jsonb, text) from public;
 grant execute on function public.replay_offline_sale(uuid, uuid, uuid, jsonb, timestamptz, uuid, text, jsonb, text) to authenticated;
 
--- Takings by payment type for a date range (owner reports; permission checked inside).
-create or replace function public.takings_by_payment_type(p_shop_id uuid, p_from timestamptz, p_to timestamptz)
-returns table (payment_type text, receipts bigint, total numeric)
-language sql stable security definer set search_path = public as $$
-  select s.payment_type, count(*), coalesce(sum(s.total), 0)
-  from public.sales s
-  where s.shop_id = p_shop_id and s.status = 'completed' and s.sold_at >= p_from and s.sold_at < p_to
-    and public.has_permission(p_shop_id, 'reports.view')
-  group by s.payment_type order by 3 desc;
-$$;
-revoke all on function public.takings_by_payment_type(uuid, timestamptz, timestamptz) from public;
-grant execute on function public.takings_by_payment_type(uuid, timestamptz, timestamptz) to authenticated;
+-- Reports: shop_report() gains 'by_payment' — takings split by how customers paid.
+-- The 0014 body is kept as shop_report_v1 and wrapped, so nothing else changes.
+alter function public.shop_report(uuid, date, date) rename to shop_report_v1;
+create or replace function public.shop_report(p_shop_id uuid, p_from date, p_to date)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare v jsonb; v_tz text;
+begin
+  v := public.shop_report_v1(p_shop_id, p_from, p_to);   -- carries the reports.view check
+  select timezone into v_tz from public.shops where id = p_shop_id;
+  return v || jsonb_build_object('by_payment', (
+    select coalesce(jsonb_agg(jsonb_build_object('payment_type', payment_type, 'sales_count', n, 'revenue', t) order by t desc), '[]'::jsonb)
+    from (select payment_type, count(*) n, sum(total) t from public.sales
+          where shop_id = p_shop_id and status = 'completed'
+            and (sold_at at time zone coalesce(v_tz, 'Africa/Lagos'))::date between p_from and p_to
+          group by payment_type) x));
+end $$;
+revoke all on function public.shop_report(uuid, date, date) from public;
+grant execute on function public.shop_report(uuid, date, date) to authenticated;
+revoke all on function public.shop_report_v1(uuid, date, date) from public, anon, authenticated;
