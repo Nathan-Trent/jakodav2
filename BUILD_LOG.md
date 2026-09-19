@@ -660,9 +660,45 @@ text. Both apps now show their release number in the sidebar footer
 build time from tauri.conf.json so the two surfaces can't disagree.
 v0.3.8 tagged and pushed; GitHub Actions building.
 
+## Working through the parked list (Nathan, 2026-09-20): items 1–6
+1. Login screen redesign — both apps' LoginScreen track an explicit phase
+   (idle → checking → opening, or creating → created) instead of one "busy"
+   flag, so the button always says what's happening, including the network
+   round trip after signIn() resolves but before the app switches screens
+   (previously flashed back to "Sign in" for a moment). Errors go through
+   the existing friendlyError() mapper. auth.signUp() now returns whether a
+   session came back immediately, so the screen says "signing you in"
+   rather than always "check your email". Dropped the dead /admin login
+   variant.
+2. §8.1 tax rules page — see below.
+3–6 — in progress.
+
+### §8.1 tax rules page
+Stage 6 (0010) already built the data model, the deterministic engine, and
+"a figure is labelled an estimate until a human verifies the rule" — the
+piece still missing was TRD §8.1's "separate, dedicated settings page in
+the operational center". Built in the back office:
+- New sensitive capability `doka.tax.manage`. Doka → Configure → Tax rules.
+- Per tax type, per kind (threshold/rate/bands/filing_due): the rule in
+  force in plain language, its effective-dated history, a Verified switch,
+  and Add/Replace with a form shaped to the kind (the filing-due fields
+  switch between monthly and annual automatically from the type's own
+  `period`). Business-category → tax-type mapping editor. "Recent changes"
+  from `tax_rules_history` via a new gated RPC (that table has no select
+  policy at all — read the same way as the other admin-only figures).
+- `0024_tax_rules_admin.sql` (jakodav2, **handed to Nathan**): `add_tax_rule()`
+  is the only write path for a new rule — closes whatever was open for that
+  (type, kind), refusing an effective date that wouldn't actually close it,
+  and inserts the new one in one transaction. Never an edit in place.
+- Read grants for tax_types/business_categories/business_category_tax_types/
+  tax_rules turned out fine as-is (Supabase grants `anon`/`authenticated`
+  table privileges by default; RLS is what restricts — the codebase's own
+  explicit `revoke all ... from anon, authenticated` pattern elsewhere is
+  belt-and-braces for tables deliberately locked down, not evidence every
+  table needs it). No grant bug; checked before assuming one.
+
 ### Parked (pick up later — do not lose)
 - Self-service plan change from the dashboard (today: Zogal raises invoice).
-- §8.1 tax rules verification page; Nielsen/Norman pass on every screen.
 - Device credential to OS secure store; rate-limit activate_device;
   accountant verification of tax rules.
 - **Apple signing + notarization — REQUIRED before promoting the Mac download.**
