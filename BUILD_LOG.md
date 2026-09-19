@@ -577,6 +577,36 @@ Nathan: run 0017; set keys in the back office; set webhook URLs in Paystack
 secret hash = flutterwave_secret_hash); Vercel env DOKA_APP_URL on the back
 office; optional VITE_PAY_API_URL on the dashboard (defaults to ops URL).
 
+## Direction change: client-first + push, no polling (Nathan, 2026-09-19)
+Nathan: "all of the build should be client side first… when there's a change
+in the database, the database tells the front end… not always pinging."
+Every surface: load once, navigate in memory, Supabase Realtime pushes
+changes, writes are optimistic with in-place progress, long work is a
+background job with retries. No page-level waits; custom alerts/toasts only.
+Scheduled work runs on QStash (Upstash), not Vercel cron — Nathan runs the
+schedule-creation curl when handed it.
+Order agreed: (1) back office client-first + Realtime + optimistic switches +
+jobs + sign-in feedback; (2) payment provider Active switch (one active; one
+Pay button); (3) recurring billing: card-on-file tokens, renewal job via
+QStash, failed-charge retries, reminders 7/1/0; (4) Realtime instead of
+polling in desktop + dashboard (Presence, subscription, settings); (5)
+Marketing slice, retire /admin, §8.1 tax page.
+Rule: payments are SUBSCRIPTION ONLY — shops pay Zogal for Doka. Doka never
+moves money between a shop and its customers.
+
+### Parked (pick up later — do not lose)
+- Payment TYPE on each sale (cash / transfer / card / POS): local SQLite
+  column, outbox + record_sale RPC, receipt, Sales history filter, Reports
+  split. Touches the sync path — its own unit.
+- Self-service plan change from the dashboard (today: Zogal raises invoice).
+- Renewal reminders 7/1/0 days (folds into the QStash renewal job).
+- Marketing slice (site copy in DB, draft→publish, contact inbox + reply).
+- Retire doka.zogal.app/admin once Finance covers it (it does now — remove).
+- §8.1 tax rules verification page; Nielsen/Norman pass on every screen.
+- Device credential to OS secure store; rate-limit activate_device; Apple
+  signing; accountant verification of tax rules.
+- Redesign of the login screen (feedback state first — part of step 1).
+
 ## Release pipeline — LIVE (2026-09-18)
 v0.3.0 (Windows) and v0.3.1 (Windows + macOS arm64/x86_64, unsigned) built
 and published by GitHub Actions from tags. Updater public key in
