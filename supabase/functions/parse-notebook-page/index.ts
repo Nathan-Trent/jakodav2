@@ -14,8 +14,10 @@
  *   notebook_scans row     — updated with the result via the service role.
  *
  * Deploy:
- *   npx supabase secrets set ANTHROPIC_API_KEY=<key>
  *   npx supabase functions deploy parse-notebook-page
+ * The Anthropic key is set from the back office (Doka → Settings → Keys,
+ * product_secrets doka/anthropic_api_key). `supabase secrets set
+ * ANTHROPIC_API_KEY=…` still works as a fallback.
  * (JWT verification stays ON — this runs as a signed-in user.)
  */
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -26,7 +28,7 @@ import { zodOutputFormat } from "npm:@anthropic-ai/sdk@0.125.0/helpers/zod";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const ANTHROPIC_API_KEY_ENV = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -57,8 +59,6 @@ const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  if (!ANTHROPIC_API_KEY) return json({ error: "model key not configured" }, 500);
-
   const authHeader = req.headers.get("authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) return json({ error: "sign in first" }, 401);
 
@@ -68,6 +68,14 @@ Deno.serve(async (req) => {
   const mediaType = body.media_type ?? "image/jpeg";
   if (!["image/jpeg", "image/png", "image/webp"].includes(mediaType)) return json({ error: "unsupported image type" }, 400);
   if (body.image_base64.length * 0.75 > MAX_IMAGE_BYTES) return json({ error: "image too large (max 4 MB)" }, 413);
+
+  const svc = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false }, db: { schema: "public" } });
+  // Key from product_secrets (back-office set), env as fallback. Service role only — never the user's client.
+  const { data: secretRow, error: secretErr } = await svc.from("product_secrets").select("value").eq("product", "doka").eq("key", "anthropic_api_key").maybeSingle();
+  if (secretErr) console.error("product_secrets read failed:", secretErr.message);
+  const ANTHROPIC_API_KEY = (secretRow?.value as string | undefined) || ANTHROPIC_API_KEY_ENV;
+  // Checked before notebook_scan_begin so a missing key never spends the shop's allowance.
+  if (!ANTHROPIC_API_KEY) return json({ error: "Notebook reading is not switched on yet. Ask Zogal to set the model key." }, 500);
 
   // As the user: RLS + the quota check in Postgres decide whether this call may happen.
   const asUser = createClient(SUPABASE_URL, ANON_KEY, {
@@ -87,7 +95,6 @@ Deno.serve(async (req) => {
     .from("items").select("id, name, suggested_price").eq("shop_id", body.shop_id).eq("is_active", true).order("name");
   const itemList = (items ?? []).map((i) => `${i.id}\t${i.name}\t₦${i.suggested_price}`).join("\n");
 
-  const svc = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false }, db: { schema: "public" } });
   const { data: modelSetting } = await svc.rpc("platform_setting", { p_key: "notebook.model" });
   const { data: maxRowsSetting } = await svc.rpc("platform_setting", { p_key: "notebook.max_rows_per_page" });
   const model = typeof modelSetting === "string" && modelSetting ? modelSetting : "claude-opus-5";
