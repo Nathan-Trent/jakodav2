@@ -59,10 +59,11 @@ export function SubscriptionScreen() {
   }, []);
 
   const [paying, setPaying] = useState<string | null>(null);
-  const pay = async (invoiceId: string, provider: "paystack" | "flutterwave") => {
+  // One button. Zogal chooses the provider on its side; the owner just pays.
+  const pay = async (invoiceId: string) => {
     setPaying(invoiceId);
     try {
-      const r = await payApi("/api/pay/init", { invoice_id: invoiceId, provider });
+      const r = await payApi("/api/pay/init", { invoice_id: invoiceId });
       if (r.url) window.location.assign(r.url); else notifyError(new Error(r.error ?? "Couldn't start payment"));
     } catch (e) { notifyError(e); }
     setPaying(null);
@@ -89,10 +90,7 @@ export function SubscriptionScreen() {
                   <div className="font-semibold">Invoice {i.number} · {naira(i.amount)}</div>
                   <div className="text-caption text-muted-foreground">{planName(d!.plans, i.plan_key)} · {i.period_start} to {i.period_end}</div>
                 </div>
-                <div className="flex gap-2">
-                  <Button disabled={paying === i.id} onClick={() => void pay(i.id, "paystack")}>Pay with Paystack</Button>
-                  <Button variant="outline" disabled={paying === i.id} onClick={() => void pay(i.id, "flutterwave")}>Pay with Flutterwave</Button>
-                </div>
+                <Button disabled={paying === i.id} onClick={() => void pay(i.id)}>{paying === i.id ? "Opening secure payment…" : `Pay ${naira(i.amount)}`}</Button>
               </CardContent></Card>
             ))}
           </div>
