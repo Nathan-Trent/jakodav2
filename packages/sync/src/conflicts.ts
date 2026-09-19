@@ -5,7 +5,8 @@ export interface SyncConflictRow {
   id: string;
   shop_id: string;
   device_id: string | null;
-  kind: "stock_shortfall" | "duplicate_sale" | "below_floor" | "other";
+  /** "locked_period" added in 0010 (§8/PRD §5.7): an offline sale landing in an already-filed tax period. */
+  kind: "stock_shortfall" | "duplicate_sale" | "below_floor" | "locked_period" | "other";
   sale_id: string | null;
   item_id: string | null;
   detail: Record<string, unknown>;

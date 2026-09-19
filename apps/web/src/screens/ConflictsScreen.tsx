@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { IconAlertTriangle, IconCheck, IconRefresh } from "@tabler/icons-react";
+import { formatNaira, toKobo } from "@zogal/shared";
 import { listConflicts, resolveConflict, type SyncConflictRow } from "@zogal/sync";
 import { PageHeader } from "@/components/Shell";
 import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, notifyError, notifySuccess } from "@zogal/ui";
@@ -127,12 +128,18 @@ function ResolveForm({ onSubmit, onCancel }: { onSubmit: (note: string) => Promi
   );
 }
 
+/** Naira in jsonb `detail` may arrive as "1500.5" — same rule as everywhere else, never a raw number. */
+function money(v: unknown): string {
+  try { return formatNaira(toKobo(v as string | number)); } catch { return `₦${v}`; }
+}
+
 function headline(r: SyncConflictRow): string {
   const name = (r.detail.item_name as string) ?? "An item";
   switch (r.kind) {
     case "stock_shortfall": return `${name} sold without enough stock on record`;
     case "below_floor": return `${name} sold below its floor price`;
     case "duplicate_sale": return "The same sale arrived twice";
+    case "locked_period": return "A sale arrived after its tax period was filed";
     default: return "Sync issue";
   }
 }
@@ -145,10 +152,14 @@ function explain(r: SyncConflictRow): string {
       return `${sold} sold, but ${un} had no batch left to cost against — another terminal may have sold the same stock offline, or a delivery was never entered. The sale is recorded; profit for those ${un} is unknown until you add the missing purchase.`;
     }
     case "below_floor":
-      return `Sold at ₦${r.detail.unit_price} when the floor was ₦${r.detail.floor_at_sale}. The sale stands as it happened.`;
+      return `Sold at ${money(r.detail.unit_price)} when the floor was ${money(r.detail.floor_at_sale)}. The sale stands as it happened.`;
     case "duplicate_sale":
       return "The terminal sent the same sale twice; only one was kept.";
+    case "locked_period":
+      return "This sale happened before that period's filing date, but reached the server after it was already marked filed. The sale is recorded as it happened; the filed figures for that period no longer include it — check with whoever handles filing about whether an amendment is needed.";
     default:
-      return JSON.stringify(r.detail);
+      // "other" — an unusual case the app doesn't have a plain sentence for yet.
+      // Never a raw JSON dump: say what's known and nothing that looks broken.
+      return typeof r.detail.note === "string" ? r.detail.note : "The sale is recorded as it happened. No further detail was given for this one.";
   }
 }
