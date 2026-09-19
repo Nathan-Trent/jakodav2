@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLogout } from "@tabler/icons-react";
+import { IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLogout, IconRefresh } from "@tabler/icons-react";
 import { Badge, ZogalLockup, ZogalMark, cn } from "@zogal/ui";
 import { SyncBadge } from "@/components/SyncBadge";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { Presence } from "@/components/Presence";
 import { useSession } from "@/lib/session";
 import { visibleNav, type PageKey } from "@/lib/nav";
+import { isTauri, useUpdaterCtx } from "@/lib/updater";
 
 const COLLAPSE_KEY = "zogal.sidebar.collapsed";
 
@@ -21,6 +22,7 @@ export function AppShell({ page, onNavigate, children }: { page: PageKey; onNavi
   const { ctx, active, device, signOut } = useSession();
   const nav = visibleNav(active!.permissions);
   const [signingOut, setSigningOut] = useState(false);
+  const updater = useUpdaterCtx();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem(COLLAPSE_KEY) === "1"; } catch { return false; }
   });
@@ -88,6 +90,16 @@ export function AppShell({ page, onNavigate, children }: { page: PageKey; onNavi
                 )}
               </div>
             </div>
+          )}
+          {isTauri() && (
+            <button
+              disabled={updater.state.status === "checking" || updater.state.status === "downloading"}
+              title="Check for updates now (Doka also checks by itself)"
+              onClick={() => void updater.checkNow()}
+              className="flex items-center gap-2 text-[13px] text-sidebar-muted hover:text-sidebar-foreground transition-colors"
+            >
+              <IconRefresh size={16} stroke={1.75} className={updater.state.status === "checking" ? "animate-spin" : undefined} /> {!collapsed && (updater.state.status === "checking" ? "Checking…" : "Check for updates")}
+            </button>
           )}
           <button
             disabled={signingOut}

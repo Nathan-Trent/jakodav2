@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
 /**
  * Auto-update for installed desktops (Nathan, 2026-09-13: "we can always
@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from "react";
  * hook is inert: the site is simply redeployed.
  */
 export interface UpdateState {
-  status: "idle" | "checking" | "available" | "downloading" | "ready" | "error";
+  status: "idle" | "checking" | "available" | "downloading" | "ready" | "error" | "uptodate";
   version?: string;
   notes?: string;
   progress?: number; // 0..1
@@ -30,13 +30,13 @@ type UpdateHandle = {
   downloadAndInstall: (cb?: (e: { event: "Started" | "Progress" | "Finished"; data: { contentLength?: number; chunkLength?: number } }) => void) => Promise<void>;
 };
 
-export function useUpdater(): { state: UpdateState; install: () => Promise<void>; dismiss: () => void; checkNow: () => Promise<void> } {
+function useUpdater(): { state: UpdateState; install: () => Promise<void>; dismiss: () => void; checkNow: () => Promise<void> } {
   const [state, setState] = useState<UpdateState>({ status: "idle" });
   const [update, setUpdate] = useState<UpdateHandle | null>(null);
 
-  const check = useCallback(async () => {
-    if (!isTauri()) return;
-    setState((s) => (s.status === "idle" ? { status: "checking" } : s));
+  const check = useCallback(async (manual = false) => {
+    if (!isTauri()) { if (manual) setState({ status: "uptodate" }); return; }
+    setState((s) => (s.status === "idle" || s.status === "uptodate" || manual ? { status: "checking" } : s));
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
       const u = await check();
@@ -44,11 +44,12 @@ export function useUpdater(): { state: UpdateState; install: () => Promise<void>
         setUpdate(u as unknown as UpdateHandle);
         setState({ status: "available", version: u.version, ...(u.body ? { notes: u.body } : {}) });
       } else {
-        setState({ status: "idle" });
+        // Manual check: say so; automatic: stay quiet.
+        setState({ status: manual ? "uptodate" : "idle" });
       }
     } catch (e) {
-      // No network or GitHub unreachable: not an error the cashier needs.
-      setState({ status: "idle", error: e instanceof Error ? e.message : String(e) });
+      // No network or GitHub unreachable: not an error the cashier needs unless they asked.
+      setState({ status: manual ? "error" : "idle", error: e instanceof Error ? e.message : String(e) });
     }
   }, []);
 
@@ -76,6 +77,19 @@ export function useUpdater(): { state: UpdateState; install: () => Promise<void>
     }
   }, [update]);
 
-  const dismiss = useCallback(() => setState((s) => (s.status === "available" ? { ...s, status: "idle" } : s)), []);
-  return { state, install, dismiss, checkNow: check };
+  const dismiss = useCallback(() => setState((s) => (s.status === "available" || s.status === "uptodate" || s.status === "error" ? { ...s, status: "idle" } : s)), []);
+  return { state, install, dismiss, checkNow: () => check(true) };
+}
+
+/** One updater for the whole app, so the banner and the "Check for updates" button agree. */
+type Updater = ReturnType<typeof useUpdater>;
+const UpdaterCtx = createContext<Updater | null>(null);
+export function UpdaterProvider({ children }: { children: ReactNode }) {
+  const u = useUpdater();
+  return createElement(UpdaterCtx.Provider, { value: u }, children);
+}
+export function useUpdaterCtx(): Updater {
+  const v = useContext(UpdaterCtx);
+  if (!v) throw new Error("useUpdaterCtx outside UpdaterProvider");
+  return v;
 }

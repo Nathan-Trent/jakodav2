@@ -21,10 +21,12 @@ import { ComingSoonScreen } from "@/screens/ComingSoonScreen";
 import { ConflictsScreen } from "@/screens/ConflictsScreen";
 import { GateBanner, LockedScreen } from "@/components/GateBanner";
 import { WebTillGate } from "@/components/WebTillGate";
+import { UpdaterProvider } from "@/lib/updater";
 
 export function App() {
   return (
     <WebTillGate>
+      <UpdaterProvider>
       <SessionProvider>
         <SyncProvider>
           <ShopDataProvider>
@@ -33,6 +35,7 @@ export function App() {
           </ShopDataProvider>
         </SyncProvider>
       </SessionProvider>
+      </UpdaterProvider>
     </WebTillGate>
   );
 }

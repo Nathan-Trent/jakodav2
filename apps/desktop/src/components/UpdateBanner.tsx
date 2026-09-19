@@ -1,13 +1,13 @@
 import { IconDownload } from "@tabler/icons-react";
 import { Alert, Button } from "@zogal/ui";
-import { useUpdater } from "@/lib/updater";
+import { useUpdaterCtx } from "@/lib/updater";
 
 /**
  * "A new version is ready" — visible, never forced. The cashier chooses
  * when to restart (Norman: the user controls timing of disruptive actions).
  */
 export function UpdateBanner() {
-  const { state, install, dismiss } = useUpdater();
+  const { state, install, dismiss } = useUpdaterCtx();
   if (state.status === "idle" || state.status === "checking") return null;
   const pct = Math.round((state.progress ?? 0) * 100);
   return (
@@ -20,7 +20,8 @@ export function UpdateBanner() {
       )}
       {state.status === "downloading" && <Alert tone="info" title={`Downloading update… ${pct}%`}>Keep the app open.</Alert>}
       {state.status === "ready" && <Alert tone="success" title="Installed — restarting">One moment.</Alert>}
-      {state.status === "error" && <Alert tone="warning" title="Update didn't install">{state.error ?? "Try again later."} Your app keeps working as it is.</Alert>}
+      {state.status === "uptodate" && <Alert tone="success" title="You have the latest Doka" action={<Button size="sm" variant="ghost" onClick={dismiss}>OK</Button>}>Doka checks by itself every few hours too.</Alert>}
+      {state.status === "error" && <Alert tone="warning" title="Couldn't check for updates" action={<Button size="sm" variant="ghost" onClick={dismiss}>OK</Button>}>{state.error ?? "Try again later."} Your app keeps working as it is.</Alert>}
     </div>
   );
 }
