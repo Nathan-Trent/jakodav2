@@ -3,6 +3,7 @@ import { Button, Card, CardContent, Input, Label, notifyError, notifySuccess } f
 import { PageHeader, Page } from "@/components/AppShell";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
+import { ScannerSettings } from "@/components/ScannerSettings";
 
 const TIMEZONES = ["Africa/Lagos", "Africa/Accra", "Africa/Nairobi", "Africa/Johannesburg", "Europe/London", "UTC"];
 
@@ -45,6 +46,7 @@ export function SettingsScreen() {
             <div><Button type="submit" disabled={busy || !name.trim()}>{busy ? "Saving…" : "Save"}</Button></div>
           </form>
         </CardContent></Card>
+        <ScannerSettings />
       </Page>
     </>
   );

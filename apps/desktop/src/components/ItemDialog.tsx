@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { IconBarcode, IconPrinter, IconSparkles, IconTrash } from "@tabler/icons-react";
+import { IconBarcode, IconPrinter, IconScan, IconSparkles, IconTrash } from "@tabler/icons-react";
 import type { BarcodeRow, ItemRow } from "@zogal/shared";
 import { formatNaira, fromKobo, toKobo } from "@zogal/shared";
 import { addManufacturerBarcode, generateBarcode, isValidEan13, removeBarcode, setItemPrices } from "@zogal/inventory-batches";
@@ -8,6 +8,7 @@ import { printLabels, type LabelLayout } from "@/lib/labels";
 import { useSession } from "@/lib/session";
 import { useOnline } from "@/lib/useOnline";
 import { getSupabase } from "@/lib/supabase";
+import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
 
 /**
  * Item detail: barcodes (generate / attach / remove / print) and selling
@@ -26,6 +27,8 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
   const [manual, setManual] = useState("");
   const [busy, setBusy] = useState(false);
   const [toRemove, setToRemove] = useState<BarcodeRow | null>(null);
+  // "Scan the item's barcode": while armed, the next scanner read attaches to this item.
+  const [arming, setArming] = useState(false);
   const [floor, setFloor] = useState("");
   const [suggested, setSuggested] = useState("");
   const [reason, setReason] = useState("");
@@ -45,8 +48,22 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
     setSuggested(fromKobo(toKobo(item.suggested_price)));
     setReason("");
     setManual("");
+    setArming(false);
     void loadCodes();
   }, [item, loadCodes]);
+
+  const attach = useCallback(async (code: string) => {
+    if (!item) return;
+    setBusy(true);
+    try {
+      await addManufacturerBarcode(getSupabase(), active!.shop.id, item.id, code.trim());
+      notifySuccess("Barcode attached", { description: code.trim() });
+      setManual("");
+      setArming(false);
+      await loadCodes();
+    } catch (e) { notifyError(e); } finally { setBusy(false); }
+  }, [item, active, loadCodes]);
+  useBarcodeScanner((code) => void attach(code), { enabled: arming && !!item && online, minLength: 4 });
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -59,8 +76,9 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
   const manualOk = manual.trim().length >= 4;
   const manualLooksEan = /^\d{13}$/.test(manual.trim());
   const manualEanBad = manualLooksEan && !isValidEan13(manual.trim());
-  const primaryCode = codes[0];
-  const hasCode = !!primaryCode;
+  const generated = codes.find((c) => c.source === "generated");
+  const hasGenerated = !!generated;
+  const labelCode = generated ?? codes[0];   // print the generated label if there is one
 
   return (
     <>
@@ -71,34 +89,19 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
             <DialogDescription>Barcodes are unique within {shop.name} only. Cost prices live under Purchases and are never edited here.</DialogDescription>
           </DialogHeader>
 
-          {/* Barcodes */}
+          {/* Barcodes — one generated at most, any number scanned from the pack (0028) */}
           <section className="grid gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-subheading flex items-center gap-2"><IconBarcode size={16} /> Barcodes</h3>
-              {canEditItems && (
-                <Button size="sm" variant="outline" disabled={busy || hasCode || !online}
-                  title={hasCode
-                    ? "This item already has a barcode — remove it first to generate a new one"
-                    : !online ? "Generating a barcode needs a connection (it must be unique across the shop). Scanning existing codes works offline." : undefined}
-                  onClick={() => run(async () => {
-                  const row = await generateBarcode(db, item.id);
-                  notifySuccess("Barcode generated", { description: `${row.code} — print a label and stick it on the item.` });
-                  await loadCodes();
-                })}>
-                  <IconSparkles size={14} /> Generate
-                </Button>
-              )}
-            </div>
+            <h3 className="text-subheading flex items-center gap-2"><IconBarcode size={16} /> Barcodes</h3>
             {codes.length === 0 ? (
               <Alert tone="info" title="No barcode yet">
-                Generate one, or type the manufacturer's code from the packaging below.
+                If the pack has its own barcode, scan it in. If it doesn't, generate one and print a label.
               </Alert>
             ) : (
               <ul className="grid gap-1.5">
                 {codes.map((c) => (
                   <li key={c.id} className="flex items-center gap-3 rounded-[10px] border px-3 py-2">
                     <span className="font-mono text-small flex-1">{c.code}</span>
-                    <Badge variant="secondary">{c.source === "generated" ? "Generated" : "Manufacturer"}</Badge>
+                    <Badge variant="secondary">{c.source === "generated" ? "Generated" : "Scanned from pack"}</Badge>
                     {canEditItems && (
                       <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-destructive" aria-label="Remove barcode" onClick={() => setToRemove(c)}>
                         <IconTrash size={14} />
@@ -108,30 +111,39 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
                 ))}
               </ul>
             )}
-            {canEditItems && hasCode && (
-              <p className="text-caption text-muted-foreground">
-                An item carries exactly one barcode, so labels never disagree. To change it, remove the current code first — then you can generate or attach another.
-              </p>
-            )}
-            {canEditItems && !hasCode && !online && (
-              <p className="text-caption text-muted-foreground">
-                You're offline. Generating or attaching a barcode needs a connection so it can be checked for uniqueness — scanning existing codes still works.
-              </p>
-            )}
-            {canEditItems && !hasCode && online && (
-              <form className="flex gap-2" onSubmit={(e: FormEvent) => { e.preventDefault(); void run(async () => {
-                await addManufacturerBarcode(db, shop.id, item.id, manual);
-                notifySuccess("Barcode attached");
-                setManual("");
-                await loadCodes();
-              }); }}>
-                <Input className="font-mono" placeholder="Scan or type the code on the packaging" value={manual} onChange={(e) => setManual(e.target.value)} aria-invalid={manualEanBad} />
-                <Button type="submit" variant="secondary" disabled={busy || !manualOk || manualEanBad}>Attach</Button>
-              </form>
-            )}
-            {!hasCode && manualEanBad && <p className="text-caption text-destructive">That 13-digit code fails its check digit — probably a typo.</p>}
 
-            {primaryCode && (
+            {canEditItems && (
+              <div className="grid gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button variant={arming ? "default" : "outline"} size="sm" disabled={busy || !online} aria-pressed={arming}
+                    title={!online ? "Attaching a barcode needs a connection so it can be checked for uniqueness in the shop." : undefined}
+                    onClick={() => setArming((a) => !a)}>
+                    <IconScan size={14} /> {arming ? "Listening — scan the pack now" : "Scan the item's barcode"}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={busy || hasGenerated || !online}
+                    title={hasGenerated ? "This item already has a generated barcode — remove it first to generate a new one." : !online ? "Generating needs a connection." : undefined}
+                    onClick={() => run(async () => {
+                      const row = await generateBarcode(db, item.id);
+                      notifySuccess("Barcode generated", { description: `${row.code} — print a label and stick it on the item.` });
+                      await loadCodes();
+                    })}>
+                    <IconSparkles size={14} /> Generate one
+                  </Button>
+                </div>
+                {arming && <p className="text-caption text-muted-foreground">Point the scanner at the barcode on the packaging. It attaches the moment it reads.</p>}
+                {online && (
+                  <form className="flex gap-2" onSubmit={(e: FormEvent) => { e.preventDefault(); void attach(manual); }}>
+                    <Input className="font-mono" placeholder="Or type the code from the pack" value={manual} onChange={(e) => setManual(e.target.value)} aria-invalid={manualEanBad} />
+                    <Button type="submit" variant="secondary" disabled={busy || !manualOk || manualEanBad}>Attach</Button>
+                  </form>
+                )}
+                {manualEanBad && <p className="text-caption text-destructive">That 13-digit code fails its check digit — probably a typo.</p>}
+                {!online && <p className="text-caption text-muted-foreground">You're offline. Attaching or generating a barcode needs a connection so it can be checked for uniqueness — selling by scan still works.</p>}
+                <p className="text-caption text-muted-foreground">An item can carry several codes scanned from its packaging, but only one generated label — remove it to generate another.</p>
+              </div>
+            )}
+
+            {labelCode && (
               <div className="flex items-end gap-2 pt-1">
                 <div className="grid gap-1">
                   <Label className="text-caption text-muted-foreground">Copies</Label>
@@ -144,7 +156,7 @@ export function ItemDialog({ item, onOpenChange, onChanged }: { item: ItemRow | 
                     <option value="roll">Label roll (50×30 mm)</option>
                   </select>
                 </div>
-                <Button variant="outline" onClick={() => printLabels([{ code: primaryCode.code, name: item.name, price: formatNaira(toKobo(item.suggested_price)), copies: Math.max(1, Number(copies) || 1) }], layout, shop.name)}>
+                <Button variant="outline" onClick={() => printLabels([{ code: labelCode.code, name: item.name, price: formatNaira(toKobo(item.suggested_price)), copies: Math.max(1, Number(copies) || 1) }], layout, shop.name)}>
                   <IconPrinter size={16} /> Print labels
                 </Button>
               </div>

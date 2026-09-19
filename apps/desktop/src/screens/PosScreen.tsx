@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { IconBarcode, IconPlayerPause, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconBarcode, IconPlayerPause, IconPlus, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import type { ItemRow } from "@zogal/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, PAYMENT_LABEL, type Kobo, type PaymentType } from "@zogal/shared";
 import { announceStockChange, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { CustomerPicker } from "@/components/CustomerPicker";
 import { PaymentTypePicker } from "@/components/PaymentTypePicker";
-import { Alert, Button, Card, CardContent, ConfirmDialog, NumberField, Label, Separator, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
+import { Alert, Button, Card, CardContent, ConfirmDialog, Input, NumberField, Label, Separator, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
 import { StaleNotice } from "@/components/StaleNotice";
 import { heldAgo, loadHeld, saveHeld, type HeldSale } from "@/lib/heldSales";
 import { useFeature } from "@/lib/entitlements";
@@ -54,6 +54,15 @@ export function PosScreen() {
   const customersOn = useFeature("customers");   // 0027: plan may not include customers
 
   const [cart, setCart] = useState<CartLine[]>([]);
+  // Search by name or code against the terminal's working set — instant,
+  // offline. The fallback when a scan doesn't read: type three letters, tap.
+  const [q, setQ] = useState("");
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return data.items;
+    const byCode = new Set(data.barcodes.filter((b) => b.code.includes(needle)).map((b) => b.item_id));
+    return data.items.filter((i) => i.name.toLowerCase().includes(needle) || byCode.has(i.id));
+  }, [q, data.items, data.barcodes]);
   const [busy, setBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [lastScan, setLastScan] = useState<{ code: string; ok: boolean; name?: string } | null>(null);
@@ -247,6 +256,15 @@ export function PosScreen() {
         <section className="overflow-y-auto px-8 pb-8 grid gap-4 content-start">
           <StaleNotice />
 
+          {data.items.length > 0 && (
+            <label className="relative block max-w-md">
+              <IconSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input className="h-11 pl-10 pr-10 text-[15px]" placeholder="Search by name or code" value={q} onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && shown.length === 1 && shown[0] && can("sales.create") && writable && stockFor(shown[0].id) > 0) { addToCart(shown[0]); setQ(""); } if (e.key === "Escape") setQ(""); }} />
+              {q && <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Clear search" onClick={() => setQ("")}><IconX size={16} /></button>}
+            </label>
+          )}
+
           {!writable && (
             <Alert tone="warning" title="Selling is paused on this terminal">
               You can still look up stock and past sales. Sync to start selling again.
@@ -276,7 +294,8 @@ export function PosScreen() {
             </Alert>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
-              {data.items.map((it) => {
+              {shown.length === 0 && <p className="text-small text-muted-foreground col-span-full">Nothing matches “{q}”.</p>}
+              {shown.map((it) => {
                 const onHand = stockFor(it.id);
                 const cost = costPerUnit(it.id);
                 const suggested = toKobo(it.suggested_price);

@@ -8,6 +8,7 @@ import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { useShopData } from "@/lib/shopData";
 import { CostCorrectionDialog } from "@/components/CostCorrectionDialog";
+import { AddItemDialog } from "@/components/AddItemDialog";
 import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, NumberField, Label, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
@@ -49,6 +50,10 @@ export function PurchasesScreen() {
   const [priceReview, setPriceReview] = useState<RestockLine[] | null>(null);
   const [correcting, setCorrecting] = useState<BatchRow | null>(null);
   const canCorrect = perms.includes("purchases.correct_cost");
+  // 0028: a scanned code we don't know → offer "New item with this barcode" right here.
+  // Receiving stock IS where items get added, so this is the job, not friction.
+  const [newFromScan, setNewFromScan] = useState<string | null>(null);
+  const canAddItems = perms.includes("items.create");
 
   const items = data.items;
   // Newest batch per item, from the working set — available offline too.
@@ -73,7 +78,8 @@ export function PurchasesScreen() {
     });
   }
 
-  // Cache first, so scanning a delivery works with no connection.
+  // Cache first, so scanning a delivery works with no connection. Scanning
+  // the same item again counts it up — receive a carton by scanning each unit.
   useBarcodeScanner(async (code) => {
     const trimmed = code.trim();
     let itemId = data.barcodes.find((b) => b.code === trimmed)?.item_id ?? null;
@@ -81,9 +87,16 @@ export function PurchasesScreen() {
       try { itemId = (await lookupBarcode(getSupabase(), shop.id, trimmed))?.item_id ?? null; } catch { /* cache is enough */ }
     }
     const item = itemId ? items.find((i) => i.id === itemId) : undefined;
-    if (!item) { notifyInfo("Barcode not recognised", `${trimmed} isn't attached to any item here.`); return; }
+    if (!item) {
+      if (canAddItems && navigator.onLine) setNewFromScan(trimmed);
+      else notifyInfo("Barcode not recognised", `${trimmed} isn't attached to any item here.${canAddItems ? " Connect to add it as a new item." : ""}`);
+      return;
+    }
     addLine(item);
-  }, { enabled: !priceReview });
+    const cur = lines.find((l) => l.item.id === item.id);
+    const n = (cur ? lineNumbers(cur).quantity ?? 0 : 0) + 1;
+    notifyInfo(`${item.name} × ${n}`, "Scan again to add another.");
+  }, { enabled: !priceReview && newFromScan === null });
 
   const total = useMemo(
     () => addKobo(...lines.map((l) => { const n = lineNumbers(l); return n.quantity && n.unitCost !== null ? mulKobo(n.unitCost, n.quantity) : (0 as Kobo); })),
@@ -239,6 +252,8 @@ export function PurchasesScreen() {
       </div>
 
       <PriceReviewDialog lines={priceReview} onClose={() => setPriceReview(null)} onDone={refresh} />
+      <AddItemDialog open={newFromScan !== null} initialBarcode={newFromScan} noInitialStock onOpenChange={(o) => !o && setNewFromScan(null)}
+        onDone={async (name, item) => { setNewFromScan(null); notifySuccess(`Added “${name}”`); await refresh(); addLine(item); }} />
       <CostCorrectionDialog batch={correcting} itemName={correcting ? items.find((i) => i.id === correcting.item_id)?.name ?? "item" : ""} onClose={() => setCorrecting(null)} onDone={refresh} />
     </>
   );

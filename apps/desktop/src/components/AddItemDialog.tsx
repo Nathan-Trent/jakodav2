@@ -1,13 +1,29 @@
-import { useState, type FormEvent } from "react";
-import { fromKobo, toKobo } from "@zogal/shared";
-import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, NumberField, Label, notifyError } from "@zogal/ui";
+import { useEffect, useState, type FormEvent } from "react";
+import { IconScan } from "@tabler/icons-react";
+import { fromKobo, toKobo, type ItemRow } from "@zogal/shared";
+import { addManufacturerBarcode } from "@zogal/inventory-batches";
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, NumberField, Label, notifyError, notifyInfo } from "@zogal/ui";
 import { useSession } from "@/lib/session";
+import { getSupabase } from "@/lib/supabase";
+import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
 
-/** Add item + initial stock. Cost is only asked for if the user may record purchases. */
-export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: (name: string) => Promise<void> }) {
+/**
+ * Add item + initial stock. Cost is only asked for if the user may record
+ * purchases. The pack's own barcode can be scanned in right here (0028) —
+ * or arrives pre-filled when Add stock met a code it didn't know.
+ */
+export function AddItemDialog({ open, onOpenChange, onDone, initialBarcode, noInitialStock = false }: {
+  open: boolean; onOpenChange: (o: boolean) => void; onDone: (name: string, item: ItemRow) => Promise<void>; initialBarcode?: string | null;
+  /** Add stock opens this for an unknown scan: quantity and cost go on the receiving line, not here. */
+  noInitialStock?: boolean;
+}) {
   const { active, inventory, device } = useSession();
+  const [barcode, setBarcode] = useState("");
+  useEffect(() => { if (open) setBarcode(initialBarcode ?? ""); }, [open, initialBarcode]);
+  // While the dialog is open, a scanner read fills the barcode box (never the name).
+  useBarcodeScanner((code) => { setBarcode(code.trim()); notifyInfo("Barcode read", code.trim()); }, { enabled: open, minLength: 4 });
   const shop = active!.shop;
-  const canPurchase = active!.permissions.includes("purchases.create");
+  const canPurchase = active!.permissions.includes("purchases.create") && !noInitialStock;
   const [name, setName] = useState("");
   const [floor, setFloor] = useState("");
   const [suggested, setSuggested] = useState("");
@@ -25,6 +41,10 @@ export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; o
         floorPrice: fromKobo(toKobo(floor)),
         suggestedPrice: fromKobo(toKobo(suggested)),
       });
+      if (barcode.trim()) {
+        try { await addManufacturerBarcode(getSupabase(), shop.id, item.id, barcode.trim()); }
+        catch (e) { notifyError(e, "Item saved, but the barcode wasn't attached"); }
+      }
       if (canPurchase && Number(qty) > 0) {
         // Initial stock = first immutable batch (PRD §5.1)
         await inventory.recordPurchase({
@@ -34,8 +54,8 @@ export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; o
           lines: [{ itemId: item.id, quantity: Number(qty), unitCost: fromKobo(toKobo(cost || "0")) }],
         });
       }
-      setName(""); setFloor(""); setSuggested(""); setQty(""); setCost("");
-      await onDone(item.name);
+      setName(""); setFloor(""); setSuggested(""); setQty(""); setCost(""); setBarcode("");
+      await onDone(item.name, item);
     } catch (err) {
       notifyError(err);
     } finally {
@@ -77,6 +97,10 @@ export function AddItemDialog({ open, onOpenChange, onDone }: { open: boolean; o
               </div>
             </div>
           )}
+          <div className="grid gap-2">
+            <Label htmlFor="item-barcode" className="flex items-center gap-2"><IconScan size={14} /> Barcode on the pack <span className="text-muted-foreground font-normal">(optional — scan it now, or type it)</span></Label>
+            <Input id="item-barcode" className="font-mono" value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Point the scanner at the pack" />
+          </div>
           <Button disabled={busy} className="justify-self-end">{busy ? "Saving…" : "Save item"}</Button>
         </form>
       </DialogContent>

@@ -731,6 +731,39 @@ the operational center". Built in the back office:
   belt-and-braces for tables deliberately locked down, not evidence every
   table needs it). No grant bug; checked before assuming one.
 
+## Scanning is an entry type, not a destination (Nathan, 2026-09-20)
+Nathan's framing: whether it's the handheld barcode scanner or a photo of a
+page, a scan is just another way to fill the form you're already on. No
+"Scan" screen where you then choose what you meant. AI scans are what the
+plan quota gates; the barcode scanner is free and offline.
+
+### Part 1 — barcode scanner everywhere it belongs — v0.3.14
+Status: BUILT — **0028 NOT YET APPLIED**.
+- `0028_barcodes_generated_plus_scanned.sql` — rule change: at most ONE
+  generated barcode per item (delete to regenerate, as before) + ANY number
+  scanned from the pack (unique per shop). Partial unique index replaces
+  0007's; `generate_barcode` checks only generated.
+- Item dialog: **Scan the item's barcode** (arms the scanner; next read
+  attaches) · **Generate one** · type-it fallback. Labels print the
+  generated code if there is one.
+- Add item: optional "Barcode on the pack" — scan while the dialog is open
+  (fills that box, never the name) or type. Attached after create.
+- Add stock: scanning a known code counts the line up ("Milk × 3 — scan
+  again"); an UNKNOWN code opens New item pre-filled with the barcode
+  (`noInitialStock`: quantity and cost stay on the receiving line, so
+  nothing counts twice). This is where adding items is the job.
+- Sell: an unknown code says only "not recognised" — no add-item prompt,
+  that's friction at the till. Instead **search** (name or code, against
+  the cached working set, offline, Enter adds a single match).
+- Settings → Scanner: keyboard-wedge scanners can't be enumerated, so:
+  "Detected · last scan 2 s ago", a test area showing the last code and
+  ms-per-character, and a timing dial for slow/Bluetooth scanners
+  (per terminal, localStorage). Every recognised scan anywhere reports to
+  `lib/scannerStatus.ts`.
+
+### Part 2 — document scan (AI) on each flow — IN PROGRESS
+See next entry.
+
 ## Feature gating, plan entitlements, server-side gate, abuse limits (Nathan, 2026-09-19) — v0.3.13
 Status: BUILT — **0027 NOT YET APPLIED**; edge function needs redeploy
 (`npx supabase functions deploy issue-subscription-token`).
