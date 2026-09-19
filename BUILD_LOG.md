@@ -671,7 +671,41 @@ v0.3.8 tagged and pushed; GitHub Actions building.
    rather than always "check your email". Dropped the dead /admin login
    variant.
 2. §8.1 tax rules page — see below.
-3–6 — in progress.
+3. Nielsen/Norman pass — swept both apps and the back office for common
+   violations (browser confirm/alert, silent failures, unconfirmed
+   destructive actions, dialog focus/escape, empty states, currency-
+   formatting consistency). Clean everywhere except Sync issues, where
+   three real ones stacked: SyncConflictRow's TS type never included
+   "locked_period" even though 0010 added it to the DB months ago, so
+   every locked-period conflict (an offline sale landing in an
+   already-filed tax period — an active code path) silently fell into a
+   generic default branch; that branch rendered `JSON.stringify(r.detail)`
+   straight to the shop owner; and below_floor's two amounts bypassed
+   formatNaira/toKobo (no thousands separator). All three fixed in both apps.
+4. Self-service plan change: new `/api/pay/change-plan` (back office) —
+   verifies the caller as themselves (JWT, has_permission shop.settings on
+   their own shop, not a staff capability), raises a one-month invoice for
+   the chosen live plan, starts a checkout for it immediately. Dashboard:
+   "Switch to <plan>" on each plan card with a ConfirmDialog explaining what
+   happens. The plan itself only changes once apply_payment() settles that
+   invoice — same rule as any invoice, just owner-started instead of Zogal.
+5. Device credential → OS credential store: moved off localStorage (webview-
+   scoped, readable from devtools) onto Windows Credential Manager / macOS
+   Keychain / Linux Secret Service via tauri-plugin-keyring — verified with
+   a real `cargo add` + `cargo check` + full `cargo build`, not assumed from
+   docs. One-time migration reads the old localStorage binding once, moves
+   it into the keyring, never touches localStorage again — no till needs
+   re-activating. loadDevice/saveDevice/clearDevice are now async;
+   SessionProvider tracks device as `undefined` until that resolves and the
+   loading screen waits for it, so an activated till can't flash "not
+   activated". Partner web build (no native layer) keeps localStorage.
+6. Rate-limit activate_device (0025, **handed to Nathan**): anon-callable by
+   design, nothing stopped a script hammering it with no auth at all. Same
+   shape as authorize_override/submit_contact's existing rate limits: count
+   recent failed attempts by caller IP, refuse before checking the code, log
+   the outcome. A real cashier typing a real code is unaffected.
+v0.3.9 tagged and pushed for items 5-6 (native change, needs a real release
+to prove itself on macOS CI — only verified on Windows locally).
 
 ### §8.1 tax rules page
 Stage 6 (0010) already built the data model, the deterministic engine, and
@@ -698,14 +732,13 @@ the operational center". Built in the back office:
   table needs it). No grant bug; checked before assuming one.
 
 ### Parked (pick up later — do not lose)
-- Self-service plan change from the dashboard (today: Zogal raises invoice).
-- Device credential to OS secure store; rate-limit activate_device;
-  accountant verification of tax rules.
+- Accountant verification of the actual tax rules entered (the page and the
+  human-gate mechanism are done; the figures are still the Stage 6 draft
+  seed, verified = false, labelled as estimates until someone checks them).
 - **Apple signing + notarization — REQUIRED before promoting the Mac download.**
   Unsigned build shows "Doka is damaged" on Sequoia (Gatekeeper). Workaround
   today: `xattr -cr /Applications/Doka.app`. Needs Apple Developer account →
   Developer ID cert → APPLE_* secrets (workflow already supports them).
-- Redesign of the login screen (feedback state first — part of step 1).
 
 ## Release pipeline — LIVE (2026-09-18)
 v0.3.0 (Windows) and v0.3.1 (Windows + macOS arm64/x86_64, unsigned) built
