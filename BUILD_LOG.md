@@ -764,11 +764,18 @@ tauri.conf.json; private key in GitHub secrets only. Installed tills
 update themselves. Fix in v0.3.1: Apple signing vars exported only when
 the certificate secret exists.
 
-## Scheduled: temporary partner web build (Nathan, 2026-09-12)
-At the END of the build sequence: host the same app as a web build (it is a
-Vite app inside Tauri already) so a partner can sign up and test without
-the desktop install. Switched off / discontinued when Nathan says. Not
-started; nothing built for it yet.
+## Partner web build — doka.zogal.app/webapp (Nathan, 2026-09-19)
+Was: separate Vercel project + subdomain (never created). Now: the same
+Vercel project as the dashboard. `npm run web:build` builds the dashboard
+into `apps/web/dist`, then `pos:build` (Vite `--mode webapp`, base
+`/webapp/`) builds the desktop app into `apps/web/dist/webapp`; `vercel.json`
+rewrites `/webapp/*` to its own index. The desktop app has no URL routing
+(screens are state), so the base prefix is all it needs; `ZogalMark` now
+reads `import.meta.env.BASE_URL` instead of a hard `/brand/…`. Tauri builds
+untouched (base `/`, own dist). Still gated by `pos_web.enabled` — OFF right
+now; flip it in the back office when the partner starts, off when the trial
+ends. Nathan to check `VITE_SUBSCRIPTION_PUBLIC_KEY` is on the Vercel
+project; redeploys on push.
 
 ## Stage 8 — Web dashboard
 Status: BUILT (2026-09-13) — `0014_web_dashboard.sql` NOT YET APPLIED; not

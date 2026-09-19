@@ -50,12 +50,15 @@ nothing else changes: `APPLE_CERTIFICATE` (base64 .p12), `APPLE_CERTIFICATE_PASS
 
 # Web deployments (Vercel)
 
-Two projects, one repo, both with Root Directory left EMPTY:
+One project, one repo, Root Directory left EMPTY. `vercel.json` drives it:
 
-| Project | Build command | Output directory | Serves |
-|---|---|---|---|
-| shop dashboard (existing) | (from `vercel.json`: `npm run web:build`) | `apps/web/dist` | `/` owner dashboard, `/admin` Zogal back office |
-| partner POS (temporary) | `npm run pos:build` — set in the project's Build settings, overriding vercel.json | `apps/desktop/dist` | the full desktop till as a website |
+| Path | Built by | Serves |
+|---|---|---|
+| `/` and `/admin` | `npm run build -w @zogal/web` → `apps/web/dist` | owner dashboard, Zogal back office entry |
+| `/webapp` | `npm run pos:build` (Vite `--mode webapp`, base `/webapp/`) → `apps/web/dist/webapp` | the full desktop till as a website, for the partner trial |
 
-Both need env vars `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; the POS project also `VITE_SUBSCRIPTION_PUBLIC_KEY`.
-The POS project is deleted when the partner trial ends — nothing else depends on it.
+`npm run web:build` runs both. Env vars on the project: `VITE_SUPABASE_URL`,
+`VITE_SUPABASE_ANON_KEY`, `VITE_SUBSCRIPTION_PUBLIC_KEY` (the last one is what
+the web till needs to verify offline subscription tokens — add it if missing).
+The `/webapp` build is gated by the `pos_web.enabled` setting (back office →
+Doka → Settings); when the trial ends, switch it off there — no redeploy needed.

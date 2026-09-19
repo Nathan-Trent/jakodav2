@@ -1,5 +1,8 @@
 import { cn } from "../../lib/utils.js";
 
+// Vite base ("/" or "/webapp/" for the partner web build) so the file resolves wherever the app is served.
+const BASE: string = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
+
 /**
  * The Zogal mark — the ribbon Z. Copied into this project (public/brand) so
  * Doka carries its own assets and never depends on the zogal.app repo.
@@ -11,8 +14,8 @@ import { cn } from "../../lib/utils.js";
 export function ZogalMark({ size = 28, className, style }: { size?: number; className?: string; style?: React.CSSProperties }) {
   return (
     <img
-      src="/brand/zogal-mark-128.png"
-      srcSet="/brand/zogal-mark-128.png 1x, /brand/zogal-mark-256.png 2x"
+      src={`${BASE}brand/zogal-mark-128.png`}
+      srcSet={`${BASE}brand/zogal-mark-128.png 1x, ${BASE}brand/zogal-mark-256.png 2x`}
       alt=""
       width={size}
       height={size}

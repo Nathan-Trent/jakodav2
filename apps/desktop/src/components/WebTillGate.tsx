@@ -33,7 +33,7 @@ export function WebTillGate({ children }: { children: ReactNode }) {
         <div className="max-w-md grid gap-4 justify-items-center text-center">
           <ZogalMark size={48} />
           <Alert tone="info" title="The web version of Doka isn't available right now">
-            This trial address has been switched off. If you have the desktop app installed, keep using that; otherwise contact Zogal.
+            It has been switched off. If you have the desktop app installed, keep using that; otherwise contact Zogal.
           </Alert>
         </div>
       </div>

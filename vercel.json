@@ -3,5 +3,9 @@
   "outputDirectory": "apps/web/dist",
   "installCommand": "npm install",
   "framework": null,
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/webapp", "destination": "/webapp/index.html" },
+    { "source": "/webapp/(.*)", "destination": "/webapp/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
