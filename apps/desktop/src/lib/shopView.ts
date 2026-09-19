@@ -79,7 +79,19 @@ export interface ShopView {
 }
 
 /** SYNC: what an offline sale carries. `customer` is resolved server-side on replay (0012). */
-export type OfflineCustomerRef = { id: string; name: string } | { name: string; phone: string | null };
+/**
+ * Who a sale is for. {id} = on the server; {client_ref} = added on this
+ * terminal and not uploaded yet (0026) — the server resolves it by client_ref
+ * at replay. The bare {name, phone} form is what entries queued before 0026
+ * carry; still accepted.
+ */
+export type OfflineCustomerRef =
+  | { id: string; name: string }
+  | { client_ref: string; name: string; phone: string | null }
+  | { name: string; phone: string | null };
+
+/** SYNC (0026): outbox 'customer' entry — a customer added on the terminal. */
+export interface OfflineCustomerPayload { name: string; phone: string | null; note: string | null; }
 
 export interface OfflineSalePayload {
   lines: { item_id: string; quantity: number; unit_price: string; floor_price_at_sale: string }[];
@@ -95,8 +107,8 @@ export const EMPTY_SNAPSHOT: ShopSnapshot = { items: [], barcodes: [], stock: {}
  * Apply unsent sales to the server's view. Pure; the calculation the till
  * relies on offline, so it stays simple enough to read in one sitting.
  */
-export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSalePayload>[], viewCost: boolean): ShopView {
-  if (overlay.length === 0) {
+export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSalePayload>[], viewCost: boolean, customerOverlay: OutboxEntry<OfflineCustomerPayload>[] = []): ShopView {
+  if (overlay.length === 0 && customerOverlay.length === 0) {
     return {
       items: snap.items, barcodes: snap.barcodes, stock: snap.stock, batches: snap.batches,
       purchases: snap.purchases, devices: snap.devices,
@@ -129,16 +141,26 @@ export function composeView(snap: ShopSnapshot, overlay: OutboxEntry<OfflineSale
     .sort((a, b) => b.sold_at.localeCompare(a.sold_at));
   const sales: ViewSale[] = [...pendingSales, ...snap.sales.map((s) => ({ ...s, pending: false }))];
 
-  // Customers added offline show in the picker straight away (by phone,
-  // else by name), so the same regular isn't typed twice in one outage.
+  // Customers added on this terminal and not yet uploaded (0026) show in the
+  // list straight away as 'pending:<client_ref>'; so do the pre-0026 ones
+  // riding on a queued sale. Same phone or name as a known one → not repeated.
   const customers: CustomerRow[] = [...(snap.customers ?? [])];
+  for (const e of customerOverlay) {
+    const c = e.payload;
+    const dup = customers.some((x) => x.client_ref === e.clientRef || (c.phone && x.phone === c.phone));
+    if (dup) continue;
+    customers.push({
+      id: `pending:${e.clientRef}`, shop_id: e.shopId, name: c.name, phone: c.phone, note: c.note, client_ref: e.clientRef,
+      is_active: true, created_by: e.userId, created_at: e.occurredAt, updated_at: e.occurredAt,
+    });
+  }
   for (const e of overlay) {
     const c = e.payload.customer;
     if (!c || "id" in c) continue;
     const dup = customers.some((x) => (c.phone && x.phone === c.phone) || x.name.toLowerCase() === c.name.toLowerCase());
     if (dup) continue;
     customers.push({
-      id: `pending:${e.clientRef}`, shop_id: e.shopId, name: c.name, phone: c.phone, note: null,
+      id: `pending:${e.clientRef}`, shop_id: e.shopId, name: c.name, phone: c.phone, note: null, client_ref: null,
       is_active: true, created_by: e.userId, created_at: e.occurredAt, updated_at: e.occurredAt,
     });
   }

@@ -23,7 +23,8 @@ const DB_VERSION = 2;
 const STORE = "outbox";
 const CACHE = "cache";
 
-export type OutboxKind = "sale";
+/** SYNC: 'customer' (0026) — a customer added on the terminal, uploaded on its own. */
+export type OutboxKind = "sale" | "customer";
 
 export interface OutboxEntry<T = unknown> {
   /** Auto-increment: replay order. */

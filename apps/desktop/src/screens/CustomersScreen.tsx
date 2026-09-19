@@ -1,13 +1,15 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { IconArrowLeft, IconPencil, IconPlus, IconSearch, IconUserOff } from "@tabler/icons-react";
 import type { CustomerRow } from "@zogal/shared";
-import { createCustomer, normalisePhone, updateCustomer } from "@zogal/inventory-batches";
+import { normalisePhone, updateCustomer } from "@zogal/inventory-batches";
+import { addCustomerOffline } from "@/lib/addCustomer";
 import { PageHeader } from "@/components/AppShell";
 import { Alert, ConfirmDialog, Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess } from "@zogal/ui";
 import { StaleNotice } from "@/components/StaleNotice";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import { getSupabase } from "@/lib/supabase";
+import { useSync } from "@/lib/sync";
 import { useOnline } from "@/lib/useOnline";
 import { SalesScreen } from "@/screens/SalesScreen";
 
@@ -16,8 +18,9 @@ import { SalesScreen } from "@/screens/SalesScreen";
  * a purchase history — nothing more. Adding at the till is on the Sell
  * screen; this is where the list is looked after.
  *
- * Adding/editing needs a connection (a phone number must be unique per
- * shop, and that's checked by the database). The list itself is in the
+ * Adding is offline-first (0026): queued on the terminal, uploaded by sync.
+ * Editing and deactivating still need a connection (a phone number must be
+ * unique per shop, and that's checked by the database). The list is in the
  * working set, so it reads offline.
  */
 export function CustomersScreen() {
@@ -60,7 +63,7 @@ export function CustomersScreen() {
           <StaleNotice />
           {!open.is_active && <Alert tone="info" title="This customer is deactivated">They won't appear on the Sell screen. Their history is kept.</Alert>}
           {open.id.startsWith("pending:")
-            ? <Alert tone="info" title="Added on this terminal while offline">Their purchases will show here once the sale uploads.</Alert>
+            ? <Alert tone="info" title="Not yet uploaded">Added on this terminal; it uploads with the next sync. Their purchases will show here after that.</Alert>
             : <SalesScreen customerId={open.id} embedded />}
         </div>
         {editing && editing !== "new" && <CustomerDialog customer={editing} onClose={() => setEditing(null)} onDone={async () => { setEditing(null); await refresh(); }} />}
@@ -73,7 +76,7 @@ export function CustomersScreen() {
       <PageHeader
         title="Customers"
         description="Optional on every sale. Attach a customer on the Sell screen to build their history."
-        actions={canAdd && <Button onClick={() => setEditing("new")} disabled={!online} title={!online ? "Needs a connection" : undefined}><IconPlus size={16} /> Add customer</Button>}
+        actions={canAdd && <Button onClick={() => setEditing("new")}><IconPlus size={16} /> Add customer</Button>}
       />
       <div className="px-8 pb-8 grid gap-4">
         <StaleNotice />
@@ -153,8 +156,9 @@ export function CustomersScreen() {
 }
 
 function CustomerDialog({ customer, onClose, onDone }: { customer: CustomerRow | null; onClose: () => void; onDone: () => Promise<void> }) {
-  const { ctx, active } = useSession();
-  const { data } = useShopData();
+  const { ctx, active, device } = useSession();
+  const { data, reloadOverlay } = useShopData();
+  const { syncNow } = useSync();
   const [name, setName] = useState(customer?.name ?? "");
   const [phone, setPhone] = useState(customer?.phone ?? "");
   const [note, setNote] = useState(customer?.note ?? "");
@@ -174,8 +178,12 @@ function CustomerDialog({ customer, onClose, onDone }: { customer: CustomerRow |
         await updateCustomer(getSupabase(), { id: customer.id, name: name.trim(), phone: phoneClean || null, note: note.trim() || null, isActive });
         notifySuccess("Customer updated");
       } else {
-        await createCustomer(getSupabase(), { shopId: active!.shop.id, name: name.trim(), phone: phoneClean || null, note: note.trim() || null, createdBy: ctx.user.id });
-        notifySuccess(`Added ${name.trim()}`);
+        // SYNC (0026): offline-first, same path as the till picker.
+        await addCustomerOffline({
+          shopId: active!.shop.id, userId: ctx.user.id, deviceId: device?.device_id ?? null,
+          name, phone: phoneClean || null, note: note.trim() || null, reloadOverlay, syncNow,
+        });
+        notifySuccess(`Added ${name.trim()}`, navigator.onLine ? undefined : { description: "Saved on this terminal. It uploads when the connection returns." });
       }
       await onDone();
     } catch (err) { notifyError(err); } finally { setBusy(false); }

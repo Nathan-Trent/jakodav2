@@ -115,4 +115,16 @@ describe("composeView — offline sales are visible everywhere", () => {
     expect(v.stock.b).toBe(1);
     expect(v.dashboard?.stock.low_stock).toBe(1);
   });
+
+  // SYNC (0026): customers added on the terminal live in the outbox until uploaded.
+  it("shows a queued customer at once, and not twice when the server already has that phone", () => {
+    const entry = (ref: string, name: string, phone: string | null): OutboxEntry<{ name: string; phone: string | null; note: string | null }> => ({
+      seq: 1, kind: "customer", clientRef: ref, shopId: "s", deviceId: null, userId: "u",
+      occurredAt: new Date().toISOString(), payload: { name, phone, note: null }, attempts: 0, lastError: null, syncedAt: null,
+    });
+    const known = { id: "c1", shop_id: "s", name: "Ada", phone: "08030000000", note: null, client_ref: null, is_active: true, created_by: null, created_at: "", updated_at: "" };
+    const v = composeView({ ...snapshot, customers: [known] }, [], true, [entry("r1", "Bola", "08111111111"), entry("r2", "Ada again", "08030000000")]);
+    expect(v.customers.map((c) => c.id)).toEqual(["c1", "pending:r1"]);
+    expect(v.customers[1]?.client_ref).toBe("r1");
+  });
 });

@@ -731,6 +731,44 @@ the operational center". Built in the back office:
   belt-and-braces for tables deliberately locked down, not evidence every
   table needs it). No grant bug; checked before assuming one.
 
+## Four bugs from Nathan's first day on 0.3.11 (2026-09-19) — v0.3.12
+Status: BUILT — **0026 NOT YET APPLIED** (customers offline-first needs it).
+
+1. **Back office switch snapped back to Off** although the write succeeded
+   (site opened while the screen said off). `components/ops/Switch.tsx`
+   re-read the store value when `saving` cleared — before the pushed row
+   arrived — so it showed the stale value. Now follows the store only when
+   the store changes. Also `WebTillGate`: fails CLOSED when the check
+   errors with nothing cached (was open), and re-asks on window focus /
+   online, so switching the trial off takes effect without a reload.
+2. **Revoked terminal kept working.** The sync engine treated every token
+   refresh failure as "offline, retry later" — including
+   `unknown or revoked device` — and the old token stayed valid for days.
+   Engine now raises `DeviceRevokedError` from both the signing function
+   (401) and the heartbeat, forgets the token, stops, and calls
+   `onRevoked`; the desktop drops the binding (`setDevice(null)` → activation
+   screen) with the existing friendly message. Plus a Realtime subscription
+   on the terminal's own `devices` row (already in the publication, readable
+   by members): the owner's Revoke click throws it out instantly. SYNC.
+3. **Sidebar footer (version, sign out) pushed off a short window** in both
+   apps. Only the menu now gives way (`min-h-0 overflow-y-auto`, scrollbar
+   hidden); logo and footer are `shrink-0`. Layout unchanged otherwise.
+4. **Customer added at the till wasn't saved** — it only rode on the sale
+   and vanished if the sale was cancelled/held; Customers → Add saved at
+   once. Nathan's call: customers are offline-first, like sales.
+   - `0026_offline_customers.sql` — **SCHEMA ADDITION** `customers.client_ref`
+     (unique per shop); `resolve_offline_customer()` (id → client_ref →
+     phone → insert) shared by `replay_offline_customer()` (new, idempotent)
+     and `replay_offline_sale()` (re-created, same body as 0022 otherwise).
+   - Outbox kind `customer`; engine drains it oldest-first before the sales
+     that reference it. `lib/addCustomer.ts` is the one path for the till
+     picker AND Customers → Add: enqueue → overlay shows it as
+     `pending:<client_ref>` immediately → `syncNow` uploads it (near-instant
+     online). A sale references it as `{client_ref, name, phone}`; online
+     checkout resolves that to a server id through the same RPC. Edits and
+     deactivation still need a connection (phone uniqueness is the DB's).
+   - Web dashboard unchanged: it reads the same `customers` table.
+
 ## Held sales on the terminal (Nathan, 2026-09-19) — v0.3.11
 A customer is doing a transfer or went back for one more item; the cashier
 needs to serve the next person and come back. **Hold sale** parks the whole

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { IconUser, IconUserPlus, IconX } from "@tabler/icons-react";
 import { normalisePhone } from "@zogal/inventory-batches";
-import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, cn } from "@zogal/ui";
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, cn, notifyError } from "@zogal/ui";
+import { addCustomerOffline } from "@/lib/addCustomer";
+import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import type { OfflineCustomerRef } from "@/lib/shopView";
+import { useSync } from "@/lib/sync";
 
 /**
  * "Who is this sale for?" — optional, one tap, never in the way of selling.
@@ -11,9 +14,11 @@ import type { OfflineCustomerRef } from "@/lib/shopView";
  * Shows "Walk-in" until changed. The picker searches the cached customer
  * list by name or phone (works offline) and offers "Add new" with two
  * fields. The choice is returned as a reference the checkout resolves:
- * {id, name} for a known customer, {name, phone} for one added right now
- * (SYNC: created on the server at checkout when online, or carried in the
- * queued sale and created on replay when offline — see 0012).
+ * {id, name} for a known customer, {client_ref, name, phone} for one added
+ * right now. SYNC (0026): adding is offline-first — the customer is queued
+ * and shown at once, uploaded by the engine, and the sale references it by
+ * client_ref until it has a server id. It exists whether or not this sale
+ * is completed; same behaviour as Customers → Add.
  */
 export function CustomerPicker({ value, onChange, disabled }: {
   value: OfflineCustomerRef | null;
@@ -44,8 +49,11 @@ export function CustomerPicker({ value, onChange, disabled }: {
 }
 
 export function CustomerSearchDialog({ onClose, onPick }: { onClose: () => void; onPick: (c: OfflineCustomerRef) => void }) {
-  const { data } = useShopData();
+  const { ctx, active, device } = useSession();
+  const { data, reloadOverlay } = useShopData();
+  const { syncNow } = useSync();
   const [q, setQ] = useState("");
+  const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -69,10 +77,24 @@ export function CustomerSearchDialog({ onClose, onPick }: { onClose: () => void;
   const dupPhone = phoneClean && data.customers.find((c) => c.phone === phoneClean);
 
   function pickExisting(c: (typeof data.customers)[number]) {
-    // A customer added offline on this terminal has no server id yet;
-    // carry name+phone so replay resolves it to the same record.
-    if (c.id.startsWith("pending:")) onPick({ name: c.name, phone: c.phone });
-    else onPick({ id: c.id, name: c.name });
+    // Not uploaded yet: reference it by client_ref so the sale finds the
+    // same record at replay (or by name+phone for a pre-0026 pending one).
+    if (c.id.startsWith("pending:")) {
+      if (c.client_ref) onPick({ client_ref: c.client_ref, name: c.name, phone: c.phone });
+      else onPick({ name: c.name, phone: c.phone });
+    } else onPick({ id: c.id, name: c.name });
+  }
+
+  async function addNew() {
+    if (!name.trim() || !phoneOk || dupPhone || saving || !ctx?.user || !active) return;
+    setSaving(true);
+    try {
+      onPick(await addCustomerOffline({
+        shopId: active.shop.id, userId: ctx.user.id, deviceId: device?.device_id ?? null,
+        name, phone: phoneClean || null, note: null, reloadOverlay, syncNow,
+      }));
+    } catch (e) { notifyError(e, "Couldn't add the customer"); }
+    finally { setSaving(false); }
   }
 
   return (
@@ -109,7 +131,7 @@ export function CustomerSearchDialog({ onClose, onPick }: { onClose: () => void;
             </DialogFooter>
           </div>
         ) : (
-          <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (name.trim() && phoneOk && !dupPhone) onPick({ name: name.trim(), phone: phoneClean || null }); }}>
+          <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); void addNew(); }}>
             <div className="grid gap-2">
               <Label htmlFor="cp-name">Name</Label>
               <Input id="cp-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} />
@@ -127,7 +149,7 @@ export function CustomerSearchDialog({ onClose, onPick }: { onClose: () => void;
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setAdding(false)}>Back</Button>
-              <Button type="submit" disabled={!name.trim() || !phoneOk || !!dupPhone}>Use this customer</Button>
+              <Button type="submit" disabled={saving || !name.trim() || !phoneOk || !!dupPhone}>{saving ? "Adding…" : "Use this customer"}</Button>
             </DialogFooter>
           </form>
         )}

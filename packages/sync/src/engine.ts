@@ -50,7 +50,20 @@ export interface EngineOptions {
   functionsUrl: string;
   anonKey: string;
   onStatus: (s: SyncStatus) => void;
+  /**
+   * SYNC: the server no longer recognises this terminal (owner revoked it, or
+   * the credential is wrong). The engine stops itself; the app must drop the
+   * binding and send the cashier back to activation. Never treated as
+   * "offline, try later" — that is exactly how a revoked till kept selling.
+   */
+  onRevoked?: () => void;
 }
+
+/** Thrown inside the engine when the server says the device is gone. */
+export class DeviceRevokedError extends Error {
+  constructor() { super("unknown or revoked device"); this.name = "DeviceRevokedError"; }
+}
+const isRevokedMessage = (m: unknown) => typeof m === "string" && /unknown or revoked device/i.test(m);
 
 export class SyncEngine {
   private clock: ClockState;
@@ -79,7 +92,8 @@ export class SyncEngine {
     // sync would be dead for the life of the process.
     try {
       await this.refreshToken();
-    } catch {
+    } catch (e) {
+      if (e instanceof DeviceRevokedError) { this.revoke(); return; }
       await this.verifyLocally();   // fall back to whatever token we already hold
     }
     this.publish();
@@ -96,6 +110,15 @@ export class SyncEngine {
   }
 
   private onOnline = () => { void this.syncNow(); };
+
+  /** Forget the token, stop, and hand over to the app. Idempotent. */
+  revoke(): void {
+    if (this.stopped) return;
+    this.token = null; this.tokenValid = false; this.payload = null;
+    try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+    this.stop();
+    this.o.onRevoked?.();
+  }
 
   private async onTick(): Promise<void> {
     const now = performance.now();
@@ -121,7 +144,8 @@ export class SyncEngine {
       await this.drain();
       await this.refreshToken();
       await prune();
-    } catch {
+    } catch (e) {
+      if (e instanceof DeviceRevokedError) { this.revoke(); return; }
       // Offline or server down: the queue is durable, we try again next tick.
     } finally {
       this.syncing = false;
@@ -139,6 +163,18 @@ export class SyncEngine {
     for (const e of entries) {
       if (e.seq === undefined) continue;
       try {
+        // SYNC (0026): a customer added on the terminal. Replays before any
+        // sale that references it (oldest-first), idempotent by client_ref.
+        if (e.kind === "customer") {
+          const c = e.payload as { name: string; phone: string | null; note: string | null };
+          const { error } = await this.o.db.rpc("replay_offline_customer", {
+            p_shop_id: e.shopId, p_client_ref: e.clientRef, p_created_by: e.userId ?? this.o.userId,
+            p_name: c.name, p_phone: c.phone, p_note: c.note,
+          });
+          if (error) throw error;
+          await markEntrySynced(e.seq);
+          continue;
+        }
         // SYNC: `customer` is either {id} for an existing customer or
         // {name, phone} for one added offline; the server resolves it (0012).
         // SYNC: payment_type rides with the sale (0022); entries queued before it replay as cash.
@@ -185,6 +221,10 @@ export class SyncEngine {
         headers: { "content-type": "application/json", apikey: this.o.anonKey },
         body: JSON.stringify(body),
       });
+      if (res.status === 401) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (isRevokedMessage(body?.error)) throw new DeviceRevokedError();
+      }
       if (res.ok) {
         const { token, payload } = (await res.json()) as { token: string; payload: SubscriptionPayload };
         this.token = token;
@@ -194,7 +234,8 @@ export class SyncEngine {
         await this.verifyLocally();
         return;
       }
-    } catch {
+    } catch (e) {
+      if (e instanceof DeviceRevokedError) throw e;
       // Function unreachable — fall through to the plain heartbeat.
     }
 
@@ -206,7 +247,7 @@ export class SyncEngine {
       p_monotonic_seconds: report.monotonic_seconds,
       p_wall_clock_seconds: report.wall_clock_seconds,
     });
-    if (error) throw error;
+    if (error) { if (isRevokedMessage(error.message)) throw new DeviceRevokedError(); throw error; }
     const hb = data as { server_time: string; subscription_token: string | null };
     if (hb.subscription_token) { this.token = hb.subscription_token; safeSet(TOKEN_KEY, hb.subscription_token); }
     this.clock = markClockSynced(this.clock, hb.server_time);

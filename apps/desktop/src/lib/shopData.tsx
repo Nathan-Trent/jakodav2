@@ -5,7 +5,7 @@ import { toKobo, type Kobo } from "@zogal/shared";
 import { fetchShopDashboard, listBarcodes, listCustomers, stockChannel } from "@zogal/inventory-batches";
 import { cacheKey, getCache, pending, putCache, type OutboxEntry } from "@zogal/sync";
 import { listExpenses, loadFiledPeriods, loadLedgerSummary, loadTaxProfile, loadTaxReference, monthWindow, yearWindow } from "@zogal/tax-engine";
-import { composeView, EMPTY_SNAPSHOT as EMPTY, type OfflineSalePayload, type ShopSnapshot, type ShopView } from "@/lib/shopView";
+import { composeView, EMPTY_SNAPSHOT as EMPTY, type OfflineCustomerPayload, type OfflineSalePayload, type ShopSnapshot, type ShopView } from "@/lib/shopView";
 export { asOf, type ShopSnapshot, type ShopView, type ViewSale } from "@/lib/shopView";
 import { useSession } from "@/lib/session";
 import { useSync } from "@/lib/sync";
@@ -58,6 +58,7 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
 
   const [snapshot, setSnapshot] = useState<ShopSnapshot>(EMPTY);
   const [overlay, setOverlay] = useState<OutboxEntry<OfflineSalePayload>[]>([]);
+  const [customerOverlay, setCustomerOverlay] = useState<OutboxEntry<OfflineCustomerPayload>[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
@@ -71,6 +72,7 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
     if (!shopId) { setOverlay([]); return; }
     const all = await pending();
     setOverlay(all.filter((e) => e.kind === "sale" && e.shopId === shopId) as OutboxEntry<OfflineSalePayload>[]);
+    setCustomerOverlay(all.filter((e) => e.kind === "customer" && e.shopId === shopId) as OutboxEntry<OfflineCustomerPayload>[]);
   }, [shopId]);
 
   /** Instant: whatever this terminal last downloaded. */
@@ -168,7 +170,7 @@ export function ShopDataProvider({ children }: { children: ReactNode }) {
   }, [shopId, refresh]);
 
   /** snapshot ⊕ overlay — the only thing screens read. */
-  const view = useMemo<ShopView>(() => composeView(snapshot, overlay, viewCost), [snapshot, overlay, viewCost]);
+  const view = useMemo<ShopView>(() => composeView(snapshot, overlay, viewCost, customerOverlay), [snapshot, overlay, viewCost, customerOverlay]);
 
   const value = useMemo<ShopDataContext>(() => ({
     data: view,

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { IconBarcode, IconPlayerPause, IconPlus, IconTrash } from "@tabler/icons-react";
 import type { ItemRow } from "@zogal/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, PAYMENT_LABEL, type Kobo, type PaymentType } from "@zogal/shared";
-import { announceStockChange, createCustomer, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
+import { announceStockChange, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
 import { enqueue } from "@zogal/sync";
 import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
@@ -188,10 +188,15 @@ export function PosScreen() {
         let customerId: string | null = null;
         if (customer && "id" in customer) customerId = customer.id;
         else if (customer) {
-          const created = await createCustomer(getSupabase(), {
-            shopId: shop.id, name: customer.name, phone: customer.phone, createdBy: ctx.user.id,
+          // SYNC (0026): added on this terminal and maybe not uploaded yet —
+          // the same idempotent replay the engine uses returns its server id
+          // (or creates it now). A pre-0026 {name, phone} ref gets a fresh ref.
+          const { data: id, error } = await getSupabase().rpc("replay_offline_customer", {
+            p_shop_id: shop.id, p_client_ref: "client_ref" in customer ? customer.client_ref : crypto.randomUUID(),
+            p_created_by: ctx.user.id, p_name: customer.name, p_phone: customer.phone, p_note: null,
           });
-          customerId = created.id;
+          if (error) throw error;
+          customerId = id as string;
         }
         const sale = await inventory.recordSale({
           shopId: shop.id, clientRef, soldBy: ctx.user.id,

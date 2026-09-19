@@ -165,6 +165,8 @@ export interface CustomerRow {
   name: string;
   phone: string | null;
   note: string | null;
+  /** SYNC (0026): set when the customer was added on a terminal and uploaded from its outbox. */
+  client_ref: UUID | null;
   is_active: boolean;
   created_by: UUID | null;
   created_at: ISOTimestamp;

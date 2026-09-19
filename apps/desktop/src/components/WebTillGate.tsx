@@ -18,12 +18,22 @@ export function WebTillGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isTauri()) return;
-    getSupabase().rpc("pos_web_enabled").then(({ data, error }) => {
-      if (error) { setEnabled((e) => e ?? true); return; }
-      const on = data === true;
-      setEnabled(on);
-      try { localStorage.setItem("doka.posweb.enabled", on ? "1" : "0"); } catch { /* ignore */ }
-    });
+    const check = () => {
+      getSupabase().rpc("pos_web_enabled").then(({ data, error }) => {
+        // Can't ask: keep the cached answer; with no cache, a kill switch fails CLOSED.
+        if (error) { setEnabled((e) => e ?? false); return; }
+        const on = data === true;
+        setEnabled(on);
+        try { localStorage.setItem("doka.posweb.enabled", on ? "1" : "0"); } catch { /* ignore */ }
+      });
+    };
+    check();
+    // The switch is anon-readable only through this RPC (no Realtime for anon),
+    // so re-ask whenever the tab comes back into view or the network returns —
+    // switching the trial off takes effect without anyone reloading.
+    window.addEventListener("focus", check);
+    window.addEventListener("online", check);
+    return () => { window.removeEventListener("focus", check); window.removeEventListener("online", check); };
   }, []);
 
   if (enabled === null) return <LoadingMark label="Starting up…" />;

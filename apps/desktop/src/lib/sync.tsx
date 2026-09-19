@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { SyncEngine, canSeeFinancials, canWrite, type GateDecision, type SyncStatus } from "@zogal/sync";
+import { notifyError } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 
@@ -29,7 +30,7 @@ const Ctx = createContext<SyncContextValue>({
 });
 
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const { ctx, device, active } = useSession();
+  const { ctx, device, active, setDevice } = useSession();
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [engine, setEngine] = useState<SyncEngine | null>(null);
 
@@ -48,11 +49,30 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       functionsUrl: `${import.meta.env.VITE_SUPABASE_URL ?? ""}/functions/v1`,
       anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? "",
       onStatus: setStatus,
+      onRevoked: () => {
+        // SYNC: the owner revoked this terminal. Drop the binding at once —
+        // the app falls back to the activation screen (App.tsx: !device).
+        setDevice(null);
+        notifyError(new Error("unknown or revoked device")); // → "This terminal has been revoked" (ui/errors)
+      },
     });
     setEngine(e);
     void e.start();
-    return () => e.stop();
-  }, [device, userId, shopId]);
+
+    // SYNC: the database tells us, we don't ask. The owner's Revoke click
+    // updates our devices row; RLS lets a shop member see it, so the push
+    // arrives here and the terminal is out immediately — no refresh, no
+    // waiting for the next sync tick. A DELETE of the row counts the same.
+    const ch = getSupabase()
+      .channel(`device:${device.device_id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "devices", filter: `id=eq.${device.device_id}` }, (p) => {
+        const row = p.new as { revoked_at?: string | null } | undefined;
+        if (p.eventType === "DELETE" || row?.revoked_at) e.revoke();
+      })
+      .subscribe();
+
+    return () => { e.stop(); void getSupabase().removeChannel(ch); };
+  }, [device, userId, shopId, setDevice]);
 
   const value = useMemo<SyncContextValue>(() => {
     const gate = status?.gate ?? IDLE_GATE;

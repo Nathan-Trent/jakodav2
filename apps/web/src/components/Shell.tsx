@@ -21,10 +21,11 @@ export function Shell<K extends string>({ items, page, onNavigate, variant, chil
 
   const menu = (
     <>
-      <nav className="grid gap-0.5 px-3">
+      {/* Only the menu gives way on a short window — the footer (version, sign out) is never pushed off-screen. */}
+      <nav className="grid gap-0.5 px-3 content-start min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((n) => <NavButton key={n.key} active={n.key === page} icon={n.icon} label={n.label} onClick={() => { onNavigate(n.key); setOpen(false); }} />)}
       </nav>
-      <div className="mt-auto border-t border-white/10 px-5 py-4 grid gap-3">
+      <div className="mt-auto shrink-0 border-t border-white/10 px-5 py-4 grid gap-3">
         {variant === "shop" && (ctx && ctx.memberships.length > 1 ? (
           <label className="grid gap-1">
             <span className="text-micro text-sidebar-muted">Shop</span>
@@ -60,8 +61,8 @@ export function Shell<K extends string>({ items, page, onNavigate, variant, chil
         <button aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen((o) => !o)}>{open ? <IconX size={22} /> : <IconMenu2 size={22} />}</button>
       </header>
       {open && <div className="md:hidden fixed inset-0 top-14 z-10 bg-sidebar text-sidebar-foreground flex flex-col pt-3 overflow-y-auto">{menu}</div>}
-      <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col sticky top-0 h-screen overflow-y-auto">
-        <div className="flex items-center px-5 pt-5 pb-4"><ZogalLockup size={32} sub={sub} /></div>
+      <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col sticky top-0 h-screen overflow-hidden">
+        <div className="flex items-center px-5 pt-5 pb-4 shrink-0"><ZogalLockup size={32} sub={sub} /></div>
         {menu}
       </aside>
       <main className="min-w-0 bg-background">{variant === "shop" && <Presence />}{children}</main>
