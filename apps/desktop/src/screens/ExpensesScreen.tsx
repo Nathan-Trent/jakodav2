@@ -3,7 +3,8 @@ import { IconCash, IconPlus, IconTrash } from "@tabler/icons-react";
 import { formatNaira, fromKobo, toKobo, type Kobo } from "@zogal/shared";
 import { findFiledPeriodId, openAmendment, recordExpense, voidExpense, type ExpenseRow } from "@zogal/tax-engine";
 import { PageHeader } from "@/components/AppShell";
-import { Alert, ConfirmDialog, PeriodPicker, describeRange, resolvePreset, type PeriodRange, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, NumberField, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess } from "@zogal/ui";
+import { Alert, ConfirmDialog, ExpensesScanReview, PeriodPicker, ScanPagesButton, describeRange, resolvePreset, type PeriodRange, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, NumberField, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess } from "@zogal/ui";
+import { useDocumentScan } from "@/lib/documentScan";
 import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { useSession } from "@/lib/session";
@@ -31,8 +32,10 @@ const CATEGORIES: { key: string; name: string }[] = [
  * entered, not discovered days later on sync.
  */
 export function ExpensesScreen() {
-  const { ctx, active } = useSession();
+  const { ctx, active, device } = useSession();
   const { data, loading, refresh } = useShopData();
+  // 0029: a photo of a receipt is just another way to record an expense.
+  const scan = useDocumentScan("expenses");
   const { writable } = useSync();
   const online = useOnline();
   const perms = active!.permissions;
@@ -59,12 +62,28 @@ export function ExpensesScreen() {
 
   return (
     <>
+      <ExpensesScanReview open={scan.pages.length > 0} pages={scan.results} categories={CATEGORIES} onClose={() => void scan.finish("discarded")}
+        onConfirm={async (rows) => {
+          // Each row is an ordinary expense. One dated into a filed period is
+          // refused by the database (PRD §5.7) — say which, keep the rest.
+          const ids: string[] = []; let failed = 0;
+          for (const r of rows) {
+            try {
+              const e = await recordExpense(getSupabase(), { shopId: active!.shop.id, categoryKey: r.categoryKey, amount: r.amount, incurredOn: r.incurredOn, note: r.description, recordedBy: ctx!.user!.id, deviceId: device?.device_id ?? null });
+              ids.push(e.id);
+            } catch (e) { failed++; notifyError(e, `“${r.description}” wasn't recorded`); }
+          }
+          await scan.finish("confirmed", ids);
+          if (ids.length) notifySuccess(`Recorded ${ids.length} expense${ids.length === 1 ? "" : "s"} from the page${failed ? ` (${failed} not recorded)` : ""}`);
+          await refresh();
+        }} />
       <PageHeader
         title="Expenses"
         description="Rent, transport, staff and the rest — what turns gross profit into real profit."
         actions={
           <>
             <PeriodPicker value={period} onChange={setPeriod} />
+            {canRecord && <ScanPagesButton label="Scan a receipt" parse={scan.parse} onPages={(ps) => scan.setPages((cur) => [...cur, ...ps])} disabled={!scan.enabled || !writable} disabledReason={scan.disabledReason ?? "Selling is paused on this terminal."} quota={scan.quota} />}
             {canRecord && <Button onClick={() => setShowAdd(true)} disabled={!writable || !online} title={!online ? "Needs a connection" : undefined}><IconPlus size={16} /> Record expense</Button>}
           </>
         }

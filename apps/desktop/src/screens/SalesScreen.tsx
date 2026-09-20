@@ -5,9 +5,12 @@ import { PAYMENT_LABEL, PAYMENT_TYPES, type PaymentType } from "@zogal/shared";
 import { fetchSalesHistory, summariseLines, type SaleHistoryRow } from "@zogal/inventory-batches";
 import { cacheKey, readThrough } from "@zogal/sync";
 import { PageHeader } from "@/components/AppShell";
+import type { PageKey } from "@/lib/nav";
+import { useFeature } from "@/lib/entitlements";
+import { IconCamera } from "@tabler/icons-react";
 import { StaleNotice } from "@/components/StaleNotice";
 import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
-import { PeriodPicker, Badge, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, describeRange, resolvePreset, type PeriodRange, cn } from "@zogal/ui";
+import { PeriodPicker, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, describeRange, resolvePreset, type PeriodRange, cn } from "@zogal/ui";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import { getSupabase } from "@/lib/supabase";
@@ -57,7 +60,8 @@ function fromServer(r: SaleHistoryRow, viewCost: boolean): SaleView {
  * looked at before still shows offline; unsent sales from this terminal are
  * merged in from the outbox so the list is never behind the till.
  */
-export function SalesScreen({ customerId, embedded }: { customerId?: string; embedded?: boolean } = {}) {
+export function SalesScreen({ customerId, embedded, onNavigate }: { customerId?: string; embedded?: boolean; onNavigate?: (k: PageKey) => void } = {}) {
+  const scansOn = useFeature("notebook_scans");
   const { active, ctx } = useSession();
   const { data } = useShopData();
   const shop = active!.shop;
@@ -233,7 +237,10 @@ export function SalesScreen({ customerId, embedded }: { customerId?: string; emb
       <PageHeader
         title="Sales"
         description={viewAll ? `${shop.name} · every sale, with what was in it` : "Your sales, with what was in them"}
-        actions={<PeriodPicker value={period} onChange={setPeriod} />}
+        actions={<>
+          {scansOn && onNavigate && active!.permissions.includes("sales.create") && <Button variant="outline" onClick={() => onNavigate("notebook")}><IconCamera size={16} /> Scan a sales page</Button>}
+          <PeriodPicker value={period} onChange={setPeriod} />
+        </>}
       />
       {body}
     </>

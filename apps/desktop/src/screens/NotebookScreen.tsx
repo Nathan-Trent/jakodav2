@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { IconCamera, IconPhoto, IconTrash } from "@tabler/icons-react";
+import { IconArrowLeft, IconCamera, IconPhoto, IconTrash } from "@tabler/icons-react";
 import { formatNaira, fromKobo, toKobo, type Kobo } from "@zogal/shared";
 import { announceStockChange, closeScan, fetchScanQuota, parseNotebookPage, ScanError, stockChannel, type ParsedPage, type ScanQuota } from "@zogal/inventory-batches";
 import { PageHeader } from "@/components/AppShell";
@@ -30,7 +30,7 @@ interface DraftRow {
  * back office (platform_settings), checked in Postgres before the model is
  * called. The screen always shows how many scans are left (Nielsen #1).
  */
-export function NotebookScreen() {
+export function NotebookScreen({ onBack }: { onBack?: () => void } = {}) {
   const { ctx, active, device, inventory } = useSession();
   const { data, stockFor, refresh } = useShopData();
   const { writable } = useSync();
@@ -141,25 +141,28 @@ export function NotebookScreen() {
   }
 
   const remaining = quota?.remaining ?? null;
-  const canScan = online && writable && (quota?.enabled ?? false) && (remaining ?? 0) > 0;
+  const canScan = online && writable && (quota?.enabled ?? false) && (remaining === null || (remaining ?? 0) > 0);
 
   return (
     <>
       <PageHeader
-        title="Scan a page"
-        description="Photograph a handwritten sales page. Check what was read, then record."
-        actions={quota && (
-          <Badge variant={remaining === 0 ? "warning" : "secondary"} className="text-small">
-            {remaining} of {quota.allowance} free scans left this month
-          </Badge>
-        )}
+        title="Scan a sales page"
+        description="Photograph a handwritten sales page. Check what was read, then record — each row becomes an ordinary sale."
+        actions={<>
+          {quota && quota.allowance !== null && (
+            <Badge variant={remaining === 0 ? "warning" : "secondary"} className="text-small">
+              {remaining} of {quota.allowance} scans left this {quota.period}
+            </Badge>
+          )}
+          {onBack && <Button variant="outline" onClick={onBack}><IconArrowLeft size={16} /> Back to Sell</Button>}
+        </>}
       />
       <div className="px-8 pb-8 grid gap-4">
         {!online && <Alert tone="info" title="Scanning needs a connection">Reading a page uses an online service. Everything else keeps working.</Alert>}
         {quota && !quota.enabled && <Alert tone="info" title="Notebook capture is switched off">Zogal has this feature turned off at the moment.</Alert>}
         {quota && quota.enabled && remaining === 0 && (
           <Alert tone="warning" title="This month's free scans are used up">
-            {quota.used} of {quota.allowance} used. The allowance resets next month; contact Zogal to raise it for your shop.
+            {quota.used} of {quota.allowance} used. It resets at the start of the next {quota.period}; upgrading raises it.
           </Alert>
         )}
 

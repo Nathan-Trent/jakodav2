@@ -14,6 +14,8 @@ import { ConflictsScreen } from "@/screens/ConflictsScreen";
 import { SubscriptionScreen } from "@/screens/SubscriptionScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { PlanLockedScreen } from "@/screens/PlanLockedScreen";
+import { ItemsScreen } from "@/screens/ItemsScreen";
+import { PurchasesScreen } from "@/screens/PurchasesScreen";
 import { useEntitlements } from "@/lib/entitlements";
 import { featureEnabled } from "@zogal/shared";
 
@@ -53,6 +55,8 @@ function ShopRouter() {
   // 0027: the plan doesn't include this section — explain, don't hide.
   if (current.feature && !featureEnabled(entitlements, current.feature)) content = <PlanLockedScreen label={current.label} />;
   else switch (current.key) {
+    case "items": content = <ItemsScreen />; break;
+    case "purchases": content = <PurchasesScreen />; break;
     case "reports": content = <ReportsScreen />; break;
     case "staff": content = <StaffScreen />; break;
     case "devices": content = <DevicesScreen />; break;

@@ -8,13 +8,40 @@ import { PageHeader } from "@/components/AppShell";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { ItemDialog } from "@/components/ItemDialog";
 import { AddStockDialog } from "@/components/AddStockDialog";
-import { Alert, Badge, Button, Card, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifySuccess } from "@zogal/ui";
+import { Alert, Badge, Button, Card, Input, ItemsScanReview, ScanPagesButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifySuccess, type ItemsReviewResult } from "@zogal/ui";
 import { useSession } from "@/lib/session";
+import { useDocumentScan } from "@/lib/documentScan";
 
 /** Catalogue + stock. Costs/values only with items.view_cost. */
 export function ItemsScreen() {
-  const { active } = useSession();
+  const { active, inventory, device } = useSession();
   const { data, loading, refresh, stockFor, costPerUnit } = useShopData();
+  // 0029: a photo of the stock ledger is just another way to add items.
+  const scan = useDocumentScan("items");
+  const canPurchase = active!.permissions.includes("purchases.create");
+
+  /** Create each new item, then one "Opening stock" purchase for every row with a quantity. */
+  async function addScanned(rows: ItemsReviewResult[]) {
+    const created: string[] = [];
+    const stockLines: { itemId: string; quantity: number; unitCost: string }[] = [];
+    let failed = 0;
+    for (const r of rows) {
+      try {
+        const id = r.existingItemId ?? (await inventory.createItem({ shopId: shop.id, name: r.name, floorPrice: r.floorPrice, suggestedPrice: r.suggestedPrice })).id;
+        if (!r.existingItemId) created.push(id);
+        if (canPurchase && r.quantity > 0) stockLines.push({ itemId: id, quantity: r.quantity, unitCost: r.unitCost });
+      } catch (e) { failed++; notifyError(e, `Couldn't add “${r.name}”`); }
+    }
+    if (stockLines.length) {
+      try {
+        const { purchase } = await inventory.recordPurchase({ shopId: shop.id, deviceId: device?.device_id ?? null, note: "Opening stock (from scanned ledger)", lines: stockLines });
+        created.push(purchase.id);
+      } catch (e) { notifyError(e, "Items were added but the opening stock wasn't"); }
+    }
+    await scan.finish("confirmed", created);
+    notifySuccess(`Added ${created.length ? rows.length - failed : 0} item${rows.length - failed === 1 ? "" : "s"} from the page${stockLines.length ? " with opening stock" : ""}`);
+    await refresh();
+  }
   const shop = active!.shop;
   const perms = active!.permissions;
   const viewCost = perms.includes("items.view_cost");
@@ -33,7 +60,11 @@ export function ItemsScreen() {
   return (
     <>
       <PageHeader title="Items" description={`${items.length} ${items.length === 1 ? "item" : "items"} in ${shop.name} · click an item for barcodes and prices`}
-        actions={perms.includes("items.create") && <Button onClick={() => setShowAdd(true)}><IconPlus size={16} /> Add item</Button>} />
+        actions={perms.includes("items.create") && <>
+          <ScanPagesButton label="Scan a stock page" parse={scan.parse} onPages={(ps) => scan.setPages((cur) => [...cur, ...ps])} disabled={!scan.enabled} disabledReason={scan.disabledReason} quota={scan.quota} />
+          <Button onClick={() => setShowAdd(true)}><IconPlus size={16} /> Add item</Button>
+        </>} />
+      <ItemsScanReview open={scan.pages.length > 0} pages={scan.results} existingItems={data.items} onClose={() => void scan.finish("discarded")} onConfirm={addScanned} />
       <div className="px-8 pb-8 grid gap-4">
         <StaleNotice />
         <div className="relative max-w-sm">

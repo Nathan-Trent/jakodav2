@@ -9,7 +9,8 @@ import { TerminalFilter, useTerminalName } from "@/components/TerminalFilter";
 import { useShopData } from "@/lib/shopData";
 import { CostCorrectionDialog } from "@/components/CostCorrectionDialog";
 import { AddItemDialog } from "@/components/AddItemDialog";
-import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, NumberField, Label, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
+import { Alert, Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, NumberField, Label, PurchaseScanReview, ScanPagesButton, Separator, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, notifyError, notifyInfo, notifySuccess, cn } from "@zogal/ui";
+import { useDocumentScan } from "@/lib/documentScan";
 import { useSession } from "@/lib/session";
 import { getSupabase } from "@/lib/supabase";
 import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
@@ -54,6 +55,8 @@ export function PurchasesScreen() {
   // Receiving stock IS where items get added, so this is the job, not friction.
   const [newFromScan, setNewFromScan] = useState<string | null>(null);
   const canAddItems = perms.includes("items.create");
+  // 0029: a photo of the invoice / delivery note is just another way to fill these lines.
+  const scan = useDocumentScan("purchase");
 
   const items = data.items;
   // Newest batch per item, from the working set — available offline too.
@@ -134,7 +137,27 @@ export function PurchasesScreen() {
 
   return (
     <>
-      <PageHeader title="Purchases" description="Receive stock. Each line becomes a new batch at its own cost — old batches are never changed." />
+      <PageHeader title="Purchases" description="Receive stock. Each line becomes a new batch at its own cost — old batches are never changed."
+        actions={<ScanPagesButton label="Scan an invoice" parse={scan.parse} onPages={(ps) => scan.setPages((cur) => [...cur, ...ps])} disabled={!scan.enabled} disabledReason={scan.disabledReason} quota={scan.quota} />} />
+      <PurchaseScanReview open={scan.pages.length > 0} pages={scan.results} items={items} onClose={() => void scan.finish("discarded")}
+        onCreateItem={async (input) => { const it = await inventory.createItem({ shopId: shop.id, name: input.name, floorPrice: input.floorPrice, suggestedPrice: input.suggestedPrice }); await refresh(); return it; }}
+        onConfirm={(scanned, meta) => {
+          // Fill the form; the delivery is saved with the usual button (and the usual price review).
+          const byId = new Map(items.map((i) => [i.id, i]));
+          setLines((ls) => {
+            const next = [...ls];
+            for (const s of scanned) {
+              const item = byId.get(s.itemId); if (!item) continue;
+              const idx = next.findIndex((l) => l.item.id === item.id);
+              const line: RestockLine = { item, qtyText: String(s.quantity), costText: s.unitCost, lastCost: latestBatch.get(item.id) ? toKobo(latestBatch.get(item.id)!.unit_cost) : null };
+              if (idx >= 0) next[idx] = line; else next.push(line);
+            }
+            return next;
+          });
+          if (meta.supplier && !supplier) setSupplier(meta.supplier);
+          void scan.finish("confirmed");
+          notifySuccess(`${scanned.length} line${scanned.length === 1 ? "" : "s"} added from the page`, { description: "Check them, then save the delivery." });
+        }} />
       <div className="px-8 pb-2"><StaleNotice /></div>
       <div className="px-8 pb-8 grid grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
         {/* Left: pick items + history */}

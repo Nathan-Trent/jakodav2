@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { IconBarcode, IconPlayerPause, IconPlus, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
+import { IconBarcode, IconCamera, IconPlayerPause, IconPlus, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
 import type { ItemRow } from "@zogal/shared";
 import { addKobo, formatNaira, fromKobo, mulKobo, toKobo, PAYMENT_LABEL, type Kobo, type PaymentType } from "@zogal/shared";
 import { announceStockChange, lookupBarcode, stockChannel } from "@zogal/inventory-batches";
@@ -15,6 +15,7 @@ import { useFeature } from "@/lib/entitlements";
 import { useSession } from "@/lib/session";
 import { useShopData } from "@/lib/shopData";
 import type { OfflineCustomerRef } from "@/lib/shopView";
+import type { PageKey } from "@/lib/nav";
 import { useSync } from "@/lib/sync";
 import { getSupabase } from "@/lib/supabase";
 import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
@@ -43,7 +44,7 @@ function lineNumbers(l: CartLine): { quantity: number | null; unitPrice: Kobo | 
  * This screen does ONE job — the sale in front of the cashier. History,
  * figures and customers live on their own screens (Nathan, 2026-09-12).
  */
-export function PosScreen() {
+export function PosScreen({ onNavigate }: { onNavigate?: (k: PageKey) => void } = {}) {
   const { ctx, active, device, inventory } = useSession();
   const { data, loading, stockFor, costPerUnit, reloadOverlay, refresh } = useShopData();
   const { writable } = useSync();
@@ -52,6 +53,7 @@ export function PosScreen() {
   const can = (p: (typeof perms)[number]) => perms.includes(p);
   const viewCost = can("items.view_cost");
   const customersOn = useFeature("customers");   // 0027: plan may not include customers
+  const scansOn = useFeature("notebook_scans");
 
   const [cart, setCart] = useState<CartLine[]>([]);
   // Search by name or code against the terminal's working set — instant,
@@ -249,7 +251,11 @@ export function PosScreen() {
       <PageHeader
         title="Sell"
         description="Scan a barcode or tap an item. Price can go above suggested, never below floor."
-        actions={can("items.create") && <Button variant="outline" onClick={() => setShowAdd(true)}><IconPlus size={16} /> Add item</Button>}
+        actions={<>
+          {/* 0029: the day's handwritten sales page is another way to record sales. */}
+          {scansOn && onNavigate && <Button variant="outline" onClick={() => onNavigate("notebook")}><IconCamera size={16} /> Scan a sales page</Button>}
+          {can("items.create") && <Button variant="outline" onClick={() => setShowAdd(true)}><IconPlus size={16} /> Add item</Button>}
+        </>}
       />
 
       <div className="grid grid-cols-[minmax(0,1fr)_380px] min-h-0">

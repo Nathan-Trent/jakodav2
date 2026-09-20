@@ -33,6 +33,8 @@ export interface NavItem {
   comingIn?: { stage: number; what: string };
   /** 0027: plan entitlement that must be enabled; otherwise the section shows "Not included in your plan". */
   feature?: FeatureKey;
+  /** 0029: reachable from a button on another screen, not from the menu (a scan is an entry type, not a place). */
+  hidden?: boolean;
 }
 
 /**
@@ -46,7 +48,7 @@ export const NAV: NavItem[] = [
   // Everyone: a cashier sees their own sales (RLS), the owner the whole shop.
   { key: "sales", label: "Sales", icon: IconHistory },
   { key: "customers", label: "Customers", icon: IconAddressBook, anyOf: ["sales.create", "customers.manage"], feature: "customers" },
-  { key: "notebook", label: "Scan a page", icon: IconCamera, anyOf: ["sales.create"], feature: "notebook_scans" },
+  { key: "notebook", label: "Scan a sales page", icon: IconCamera, anyOf: ["sales.create"], feature: "notebook_scans", hidden: true },
   { key: "items", label: "Items", icon: IconBox },
   { key: "purchases", label: "Purchases", icon: IconTruckDelivery, anyOf: ["purchases.create"] },
   { key: "expenses", label: "Expenses", icon: IconCash, anyOf: ["expenses.create", "expenses.view"], feature: "expenses" },
@@ -61,5 +63,9 @@ export const NAV: NavItem[] = [
 export const RECEIPT_ICON = IconReceipt;
 
 export function visibleNav(perms: readonly Permission[]): NavItem[] {
+  return NAV.filter((n) => !n.hidden && (!n.anyOf || n.anyOf.some((p) => perms.includes(p))));
+}
+/** Everything the role may open, including hidden entries reached by buttons. */
+export function reachableNav(perms: readonly Permission[]): NavItem[] {
   return NAV.filter((n) => !n.anyOf || n.anyOf.some((p) => perms.includes(p)));
 }

@@ -761,8 +761,43 @@ Status: BUILT — **0028 NOT YET APPLIED**.
   (per terminal, localStorage). Every recognised scan anywhere reports to
   `lib/scannerStatus.ts`.
 
-### Part 2 — document scan (AI) on each flow — IN PROGRESS
-See next entry.
+### Part 2 — document scan (AI) as an entry type on each flow — v0.3.15
+Status: BUILT — **0029 NOT YET APPLIED**; edge function needs redeploy
+(`npx supabase functions deploy parse-notebook-page`).
+
+The button lives on the form; the screen decides what the page means; the
+person never picks a "kind". Same pipeline, quota (plan `notebook_scans`,
+now named "Document scans"), photo-never-stored rule as Stage 7.
+
+- `0029_document_scan_kinds.sql` — `page_kind` ∈ sales|items|purchase|
+  expenses; `notebook_scan_begin(shop, device, kind)` checks the permission
+  for THAT kind (+ the expenses entitlement); `notebook_scan_close` records
+  `created_ids` for every kind.
+- Edge function `parse-notebook-page`: per-kind zod schema + instructions
+  (sales page / stock ledger or price list / supplier invoice or delivery
+  note / receipt). Items and purchase kinds get the shop's item list so
+  duplicates are matched, not created. Untrusted ids scrubbed for both
+  `item_id` and `existing_item_id`.
+- `packages/inventory-batches/notebook.ts`: `parseDocumentPage(kind)`,
+  typed results; `ScanQuota.allowance/remaining` nullable + `period`.
+- `packages/ui`: `ScanPagesButton` (multi-photo, phone camera, sequential
+  parse with "Reading page 2 of 3…", partial success kept), `downscaleImage`,
+  and three props-only review dialogs — `ItemsScanReview` (name · already in
+  shop? · qty · cost · selling · floor; existing rows only add stock),
+  `PurchaseScanReview` (pick item / create it inline / qty / cost;
+  supplier), `ExpensesScanReview` (for · category · amount · date).
+- Desktop: Items → **Scan a stock page** (creates items + one "Opening
+  stock" purchase); Purchases → **Scan an invoice** (fills the delivery
+  lines; saved with the usual button and price review); Expenses → **Scan a
+  receipt** (each row an ordinary expense; a filed-period refusal is shown
+  per row, the rest record); Sell and Sales → **Scan a sales page** button;
+  the "Scan a page" menu item is gone (`nav.hidden`, `reachableNav`),
+  NotebookScreen has "Back to Sell". `lib/documentScan.ts` hook.
+- **Web dashboard gains Items and Add stock** (the phone onboarding path):
+  Items lists the catalogue with Realtime refresh, Add item (with barcode
+  number), Scan a stock page; Add stock has find-item, lines, supplier,
+  Scan an invoice. Not on web yet: sales-page scan and expenses (the
+  dashboard has no Sales/Expenses screens; say if you want them).
 
 ## Feature gating, plan entitlements, server-side gate, abuse limits (Nathan, 2026-09-19) — v0.3.13
 Status: BUILT — **0027 NOT YET APPLIED**; edge function needs redeploy

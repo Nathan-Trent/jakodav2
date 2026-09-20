@@ -29,3 +29,8 @@ export * from "./components/brand/AuthCover.js";
 export * from "./components/TaxAnswerCard.js";
 export * from "./components/brand/ConnectionScreen.js";
 export * from "./components/PresenceBar.js";
+export * from "./lib/image.js";
+export * from "./components/scan/ScanPagesButton.js";
+export * from "./components/scan/ItemsScanReview.js";
+export * from "./components/scan/PurchaseScanReview.js";
+export * from "./components/scan/ExpensesScanReview.js";

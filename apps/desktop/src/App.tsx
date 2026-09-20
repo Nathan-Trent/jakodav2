@@ -4,7 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { SessionProvider, useSession } from "@/lib/session";
 import { SyncProvider, useSync } from "@/lib/sync";
 import { ShopDataProvider } from "@/lib/shopData";
-import { NAV, visibleNav, type PageKey } from "@/lib/nav";
+import { NAV, reachableNav, visibleNav, type PageKey } from "@/lib/nav";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { DashboardScreen } from "@/screens/DashboardScreen";
@@ -67,17 +67,17 @@ function Router() {
 
   // Guard: a page the role can't see falls back to the dashboard.
   const allowed = visibleNav(active.permissions);
-  const current = allowed.find((n) => n.key === page) ?? allowed[0] ?? NAV[0]!;
+  const current = reachableNav(active.permissions).find((n) => n.key === page) ?? allowed[0] ?? NAV[0]!;
 
   let content: React.ReactNode;
   if (current.comingIn) content = <ComingSoonScreen item={current} />;
   // 0027: the plan doesn't include this section — explain, don't hide.
   else if (current.feature && !featureEnabled(entitlements, current.feature)) content = <PlanLockedScreen item={current} />;
   else if (current.key === "conflicts") content = <ConflictsScreen />;
-  else if (current.key === "sell") content = <PosScreen />;
-  else if (current.key === "sales") content = <SalesScreen />;
+  else if (current.key === "sell") content = <PosScreen onNavigate={setPage} />;
+  else if (current.key === "sales") content = <SalesScreen onNavigate={setPage} />;
   else if (current.key === "customers") content = <CustomersScreen />;
-  else if (current.key === "notebook") content = <NotebookScreen />;
+  else if (current.key === "notebook") content = <NotebookScreen onBack={() => setPage("sell")} />;
   else if (current.key === "items") content = <ItemsScreen />;
   else if (current.key === "devices") content = <DevicesScreen />;
   else if (current.key === "purchases") content = <PurchasesScreen />;

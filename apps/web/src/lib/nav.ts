@@ -1,8 +1,8 @@
 import type { Permission } from "@zogal/auth-permissions";
 import type { FeatureKey } from "@zogal/shared";
 import {
-  IconAlertTriangle, IconChartBar, IconCreditCard, IconDeviceDesktop,
-  IconLayoutDashboard, IconReceiptTax, IconSettings, IconUsers, type Icon,
+  IconAlertTriangle, IconBox, IconChartBar, IconCreditCard, IconDeviceDesktop,
+  IconLayoutDashboard, IconReceiptTax, IconSettings, IconTruckDelivery, IconUsers, type Icon,
 } from "@tabler/icons-react";
 
 /**
@@ -10,12 +10,15 @@ import {
  *   /            the shop owner's dashboard
  *   /admin/...   retired — points people to ops.business.zogal.app.
  */
-export type ShopPage = "overview" | "reports" | "staff" | "devices" | "tax" | "conflicts" | "subscription" | "settings";
+export type ShopPage = "overview" | "items" | "purchases" | "reports" | "staff" | "devices" | "tax" | "conflicts" | "subscription" | "settings";
 
 export interface NavItem<K extends string> { key: K; label: string; icon: Icon; anyOf?: Permission[]; /** 0027: plan entitlement required. */ feature?: FeatureKey }
 
 export const SHOP_NAV: NavItem<ShopPage>[] = [
   { key: "overview", label: "Overview", icon: IconLayoutDashboard },
+  // 0029: on the web so a shop can be set up from a phone — photograph the stock book, receive an invoice.
+  { key: "items", label: "Items", icon: IconBox },
+  { key: "purchases", label: "Add stock", icon: IconTruckDelivery, anyOf: ["purchases.create"] },
   { key: "reports", label: "Reports", icon: IconChartBar, anyOf: ["reports.view"], feature: "reports" },
   { key: "staff", label: "Staff", icon: IconUsers, anyOf: ["users.manage"] },
   { key: "devices", label: "Terminals", icon: IconDeviceDesktop, anyOf: ["shop.settings"] },
