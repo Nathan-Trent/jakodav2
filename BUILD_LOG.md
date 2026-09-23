@@ -1,5 +1,44 @@
 # Build Log
 
+## READ ME FIRST — two workstreams, ONE codebase (Nathan, 2026-09-23)
+
+Doka is worked on from two parallel Claude Code sessions:
+
+  A. **Doka maintenance** — bugs, migrations, back office, daily-use fixes.
+  B. **Doka for Android** — Tauri Android target, responsive/phone layout,
+     camera barcode scanning, Android Keystore, APK in the release + on the
+     marketing site.
+
+**They are not separate apps.** `apps/desktop` is one React codebase that
+Tauri builds for Windows, macOS *and* Android. There is no second copy of
+any screen: a fix to `PosScreen.tsx` fixes every platform because it IS the
+same file. Android adds `src-tauri/gen/android/` (generated), a few
+platform plugins and responsive CSS — additions, never a fork.
+
+Rules that keep the two in sync:
+- **Both sessions work on `main`, in this repo.** No long-lived Android
+  branch — that is the only thing that can make them diverge.
+- `git pull` before starting a unit of work; commit and push when it is
+  done (the standing rule), so the other session picks it up.
+- Avoid both sessions editing the same file at once. If it happens, resolve
+  the conflict rather than reverting the other session's work.
+- This file is the shared memory between them. Read it before doing
+  anything; update it after every unit.
+
+### Where things stand (keep this current)
+- Desktop released through **v0.3.15**; tags build Windows + macOS via
+  `.github/workflows/release-desktop.yml`. macOS is UNSIGNED (see Parked).
+- Migrations **0001–0027 applied**. **0028 and 0029 written but NOT YET
+  APPLIED** by Nathan (barcode rule change; document scan kinds) — the
+  features that need them will fail until they are run.
+- Edge functions `parse-notebook-page` and `issue-subscription-token` are
+  deployed (2026-09-23) and carry the 0029 / 0027 changes.
+- Not yet set up by Nathan: QStash schedule + `JOBS_SECRET` /
+  `QSTASH_*` env on the back office (renewals, reminders and the job
+  runner only fire on a schedule); Apple Developer account.
+- Android: **not started.** Nothing in `src-tauri` targets it yet.
+
+
 ## Stage 1 — Foundation
 Status: DONE (2026-09-10) — migration 0001 applied to Supabase, smoke-tested
 Multi-tenant schema; core tables for shops, users, roles/permissions;
